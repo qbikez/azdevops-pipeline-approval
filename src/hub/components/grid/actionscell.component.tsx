@@ -13,6 +13,7 @@ export function renderGridActionsCell(
 ): JSX.Element {
     const approval: ReleaseApproval = tableItem;
     return (<GridActionsCell
+        key={`col-actions-${columnIndex}-${rowIndex}`}
         rowIndex={rowIndex}
         columnIndex={columnIndex}
         tableColumn={tableColumn}
@@ -37,7 +38,7 @@ export default class GridActionsCell extends React.Component<IGridActionsCellPro
             <SimpleTableCell
                 columnIndex={this.props.columnIndex}
                 tableColumn={this.props.tableColumn}
-                key={"col-" + this.props.columnIndex}>
+                key={`col-actions-${this.props.columnIndex}-${this.props.rowIndex}`}>
                 <ButtonGroup>
                     <Button
                         key={"btn-approve-" + this.props.releaseApproval.id}
