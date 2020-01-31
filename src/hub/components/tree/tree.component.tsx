@@ -43,7 +43,7 @@ export default class ReleaseApprovalTree extends React.Component {
         {
             id: "name",
             name: "Release",
-            renderCell: renderTreeCell,
+            renderCell: renderExpandableTreeCell,
             width: 200
         }
     ];
@@ -78,7 +78,6 @@ export default class ReleaseApprovalTree extends React.Component {
             }
 
             this._itemProvider.add({
-                childItems: [],
                 data: { id: approval.id, name: approval.release.name },
                 expanded: false
             }, parent);
