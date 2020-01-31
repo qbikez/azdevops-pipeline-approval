@@ -7,21 +7,25 @@ import ReleaseApprovalGrid from "@src-root/hub/components/grid/grid.component";
 import { IHeaderCommandBarItem } from "azure-devops-ui/HeaderCommandBar";
 import { ReleaseApprovalEvents, EventType } from "./model/ReleaseApprovalEvents";
 import { ObservableValue } from "azure-devops-ui/Core/Observable";
-import { Toggle } from "azure-devops-ui/Toggle";
 import { ConditionalChildren } from "azure-devops-ui/ConditionalChildren";
 import ReleaseApprovalTree from "./components/tree/tree.component";
 
 class Hub extends React.Component<{}> {
 
+  private _stageGroupFlag: string = "stageGrouping";
+
   private _releaseGrid: React.RefObject<ReleaseApprovalGrid>;
-  private _normalMode = new ObservableValue<boolean>(true);
-  private _betaMode = new ObservableValue<boolean>(false);
+  private _normalGridMode = new ObservableValue<boolean>(true);
+  private _stageGroupMode = new ObservableValue<boolean>(false);
 
   constructor(props: {}) {
     super(props);
     this._releaseGrid = React.createRef();
     SDK.init();
-    this._betaMode.subscribe((enabled: boolean) => this._normalMode.value = !enabled);
+    const queryString = new URLSearchParams(window.location.search);
+    const stageGroupEnabled = queryString.has(this._stageGroupFlag) && JSON.parse(queryString.get(this._stageGroupFlag) || "false");
+    this._normalGridMode.value = !stageGroupEnabled;
+    this._stageGroupMode.value = stageGroupEnabled;
   }
 
   render(): JSX.Element {
@@ -33,19 +37,12 @@ class Hub extends React.Component<{}> {
           titleIconProps={{ iconName: "Rocket" }}
           commandBarItems={this._createCommandBarItems} />
         <div className="page-content page-content-top">
-          <ConditionalChildren renderChildren={this._normalMode}>
+          <ConditionalChildren renderChildren={this._normalGridMode}>
             <ReleaseApprovalGrid ref={this._releaseGrid} />
           </ConditionalChildren>
-          <ConditionalChildren renderChildren={this._betaMode}>
+          <ConditionalChildren renderChildren={this._stageGroupMode}>
             <ReleaseApprovalTree />
           </ConditionalChildren>
-          <div style={{ marginTop: "20px", float: "right" }}>
-            <Toggle
-              offText={"Beta mode OFF"}
-              onText={"Beta mode ON"}
-              checked={this._betaMode}
-              onChange={(event, value) => (this._betaMode.value = value)} />
-          </div>
         </div>
       </Page>
     );
