@@ -3,7 +3,7 @@ import * as SDK from "azure-devops-extension-sdk";
 import { Table, ITableColumn, ColumnSelect, renderSimpleCell, ISimpleTableCell } from "azure-devops-ui/Table";
 import { ObservableArray, ObservableValue, IReadonlyObservableValue } from "azure-devops-ui/Core/Observable";
 import { ReleaseApprovalService } from "@src-root/hub/services/release-approval.service";
-import { ListSelection } from "azure-devops-ui/List";
+import { ListSelection, ISimpleListCell } from "azure-devops-ui/List";
 import { CommonServiceIds, IGlobalMessagesService } from "azure-devops-extension-api";
 import { ArrayItemProvider } from "azure-devops-ui/Utilities/Provider";
 import { ISelectionRange } from "azure-devops-ui/Utilities/Selection";
@@ -25,7 +25,7 @@ import { renderExpandableTreeCell, renderTreeCell } from "azure-devops-ui/TreeEx
 
 export interface IApprovalTreeItem extends ISimpleTableCell {
     id: any;
-    name: string;
+    name: string | ISimpleListCell;
 }
 
 export default class ReleaseApprovalTree extends React.Component {
@@ -78,7 +78,10 @@ export default class ReleaseApprovalTree extends React.Component {
             }
 
             this._itemProvider.add({
-                data: { id: approval.id, name: approval.release.name },
+                data: { 
+                    id: approval.id, 
+                    name: { iconProps: { iconName: "Rocket" }, text: approval.release.name } 
+                },
                 expanded: false
             }, parent);
         });
