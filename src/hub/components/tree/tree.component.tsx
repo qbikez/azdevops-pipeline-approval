@@ -1,32 +1,12 @@
 import * as React from "react";
-import * as SDK from "azure-devops-extension-sdk";
-import { Table, ITableColumn, ColumnSelect, renderSimpleCell, ISimpleTableCell } from "azure-devops-ui/Table";
-import { ObservableArray, ObservableValue, IReadonlyObservableValue } from "azure-devops-ui/Core/Observable";
 import { ReleaseApprovalService } from "@src-root/hub/services/release-approval.service";
-import { ListSelection, ISimpleListCell } from "azure-devops-ui/List";
-import { CommonServiceIds, IGlobalMessagesService } from "azure-devops-extension-api";
-import { ArrayItemProvider } from "azure-devops-ui/Utilities/Provider";
-import { ISelectionRange } from "azure-devops-ui/Utilities/Selection";
-import { ReleaseApprovalAction } from "@src-root/hub/model/ReleaseApprovalAction";
-import { ReleaseApprovalEvents, EventType } from "@src-root/hub/model/ReleaseApprovalEvents";
-import { renderGridPipelineCell } from "@src-root/hub/components/grid/pipelinecell.component";
-import { renderGridReleaseInfoCell } from "@src-root/hub/components/grid/releaseinfocell.component";
-import { renderGridApproverInfoCell } from "@src-root/hub/components/grid/approverinfocell.component";
-import { renderGridActionsCell } from "@src-root/hub/components/grid/actionscell.component";
-import { Card } from "azure-devops-ui/Card";
-import { ReleaseApproval, Release } from "azure-devops-extension-api/Release";
-import { Button } from "azure-devops-ui/Button";
-import { ConditionalChildren } from "azure-devops-ui/ConditionalChildren";
-import ReleaseApprovalForm from "@src-root/hub/components/form/form.component";
-
 import { Tree, ITreeColumn } from "azure-devops-ui/TreeEx";
-import { ITreeItemProvider, ITreeItemEx, ITreeItem, TreeItemProvider } from "azure-devops-ui/Utilities/TreeItemProvider";
-import { renderExpandableTreeCell, renderTreeCell } from "azure-devops-ui/TreeEx";
-
-export interface IApprovalTreeItem extends ISimpleTableCell {
-    id: any;
-    name: string | ISimpleListCell;
-}
+import { ITreeItemProvider, ITreeItemEx, TreeItemProvider } from "azure-devops-ui/Utilities/TreeItemProvider";
+import { renderExpandableTreeCell } from "azure-devops-ui/TreeEx";
+import { IApprovalTreeItem } from "@src-root/hub/components/tree/treeitem";
+import {renderGridReleaseInfoTreeCell} from "@src-root/hub/components/tree/releaseinfotreecell.component";
+import { renderGridApproverInfoTreeCell } from "@src-root/hub/components/tree/approverinfotreecell.component";
+import { renderGridActionsTreeCell } from "./actionstreecell.component";
 
 export default class ReleaseApprovalTree extends React.Component {
 
@@ -41,10 +21,27 @@ export default class ReleaseApprovalTree extends React.Component {
 
     private _treeColumns: ITreeColumn<IApprovalTreeItem>[] = [
         {
-            id: "name",
+            id: "firstColumn",
             name: "Release",
             renderCell: renderExpandableTreeCell,
-            width: 200
+            width: 250
+        },
+        {
+            id: "releaseInfo",
+            name: "",
+            renderCell: renderGridReleaseInfoTreeCell,
+            width: -40
+        },
+        {
+            id: "approverInfo",
+            name: "Approval Status",
+            renderCell: renderGridApproverInfoTreeCell,
+            width: -60
+        },
+        {
+            id: "actions",
+            renderCell: renderGridActionsTreeCell,
+            width: 150
         }
     ];
 
@@ -67,20 +64,46 @@ export default class ReleaseApprovalTree extends React.Component {
     private loadData = async () => {
         const approvals = await this._releaseService.findApprovals(10, undefined);
         approvals.forEach(approval => {
-            let parent = this._itemProvider.roots.find((item) => item.data.name == approval.releaseEnvironment.name);
+            let parent = this._itemProvider.roots.find((item) => item.data.id == approval.releaseEnvironment.name);
             if (!!!parent) {
                 parent = {
                     childItems: [],
-                    data: { id: approval.releaseEnvironment.id, name: approval.releaseEnvironment.name },
-                    expanded: true
+                    data: { 
+                        id: approval.releaseEnvironment.name,
+                        isParentElement: 1,
+                        firstColumn: { 
+                            iconProps: { 
+                                iconName: "ServerEnviroment" 
+                            }, 
+                            text: approval.releaseEnvironment.name
+                        }, 
+                        definition: '',
+                        release: '',
+                        environment: '',
+                        approvalType: 0,
+                        pendingFor: 0,
+                        approver: '',
+                        approverId: '',
+                        isApproverContainer: 0
+                    },
+                    expanded: false
                 };
                 this._itemProvider.add(parent);
             }
 
             this._itemProvider.add({
                 data: { 
-                    id: approval.id, 
-                    name: { iconProps: { iconName: "Rocket" }, text: approval.release.name } 
+                    id: approval.id,
+                    isParentElement: 0,
+                    firstColumn: { iconProps: { iconName: "Clock" }, text: approval.releaseDefinition.name }, 
+                    definition: approval.releaseDefinition.name,
+                    release: approval.release.name,
+                    environment: approval.releaseEnvironment.name,
+                    approvalType: approval.approvalType,
+                    pendingFor: approval.createdOn.getTime(),
+                    approver: approval.approver.displayName,
+                    approverId: approval.approver.id,
+                    isApproverContainer: approval.approver.isContainer ? 1 : 0
                 },
                 expanded: false
             }, parent);
