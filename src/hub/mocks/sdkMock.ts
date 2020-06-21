@@ -1,6 +1,7 @@
 import * as config from "./_local.config.json";
 import * as realSDK from "azure-devops-extension-sdk";
 import * as API from "azure-devops-extension-api";
+import { ReleaseRestClient } from "azure-devops-extension-api/Release";
 
 let useMocks = false;
 
@@ -48,8 +49,12 @@ export function getClient<T>(
   clientOptions?: API.IVssRestClientOptions
 ): T {
   if (!useMocks) return API.getClient(clientClass, clientOptions);
+  let rootPath = `https://dev.azure.com/${config.organization}/`;
+  if ((clientClass as unknown) === ReleaseRestClient) {
+    rootPath = `https://vsrm.dev.azure.com/${config.organization}/`;
+  }
   const defaults = {
-    rootPath: `https://vsrm.dev.azure.com/${config.organization}/`,
+    rootPath,
     authTokenProvider: {
       getAuthorizationHeader: async (forceRefresh?: boolean) => {
         return config.authHeader;
