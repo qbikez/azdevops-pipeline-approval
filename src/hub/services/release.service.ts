@@ -14,10 +14,12 @@ import {
   CommonServiceIds,
 } from "azure-devops-extension-api";
 import { SDK, getClient } from "../mocks/sdkMock";
+import { ReleaseApprovalRow } from "../components/grid/releaseapprovalgrid.component";
 
 export class ReleaseService {
-  async getWorkItems(releaseApproval: ReleaseApproval) {
+  async getWorkItems(releaseApproval: ReleaseApprovalRow) {
     try {
+      const organization = SDK.getHost().name;
       const projectService = await SDK.getService<IProjectPageService>(
         CommonServiceIds.ProjectPageService
       );
@@ -44,12 +46,29 @@ export class ReleaseService {
         Number.parseInt(buildId)
       );
 
+      releaseApproval.build = build;
+
       const gitClient = getClient(GitRestClient);
 
       const commit = await gitClient.getCommit(
         build.sourceVersion,
         build.repository.id
       );
+
+      releaseApproval.gitCommit = commit;
+      const { prId, prName } = parseCommitMessage(commit.comment);
+
+      if (prId) {
+        releaseApproval.prId = prId;
+        releaseApproval.prName = prName;
+
+        const pr = await gitClient.getPullRequestById(
+          Number.parseInt(prId),
+          project.name
+        );
+
+        releaseApproval.pr = pr;
+      }
 
       const workItemRefs = await buildClient.getBuildWorkItemsRefs(
         project.name,
@@ -58,13 +77,16 @@ export class ReleaseService {
 
       const workClient = getClient(WorkItemTrackingRestClient);
 
-      const workItems = await workClient.getWorkItems(
-        workItemRefs.map((w) => Number.parseInt(w.id))
-      );
+      const workItems = (
+        await workClient.getWorkItems(
+          workItemRefs.map((w) => Number.parseInt(w.id))
+        )
+      ).map((wi) => ({
+        ...wi,
+        html: `https://dev.azure.com/${organization}/${project.name}/_workitems/edit/${wi.id}`,
+      }));
 
-      console.log(commit.author);
-      console.log(commit.comment);
-      return workItems;
+      releaseApproval.workItems = workItems;
     } catch (err) {
       console.error(err);
     }
@@ -102,4 +124,24 @@ export class ReleaseService {
     releaseApproval.releaseEnvironment._links =
       deployment.releaseEnvironment._links;
   }
+}
+
+function parseCommitMessage(message: string) {
+  const matches = new RegExp(
+    "Merged PR (?<prId>[0-9]+):(?<prName>[^\\\\n]+)"
+  ).exec(message);
+  if (!matches)
+    return {
+      prId: undefined,
+      prName: undefined,
+    };
+  const { groups } = (matches as unknown) as {
+    groups: { prId: string; prName: string };
+  };
+  const { prId, prName } = groups;
+
+  return {
+    prId,
+    prName,
+  };
 }

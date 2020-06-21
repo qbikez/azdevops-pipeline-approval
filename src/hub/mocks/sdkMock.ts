@@ -42,6 +42,15 @@ export const SDK = {
       name: "mock-user-name",
     };
   },
+  getHost: (): realSDK.IHostContext => {
+    if (!useMocks) return realSDK.getHost();
+    return {
+      id: "host-id",
+      name: config.organization,
+      serviceVersion: "0.0.0",
+      type: realSDK.HostType.Organization,
+    };
+  },
 };
 
 export function getClient<T>(

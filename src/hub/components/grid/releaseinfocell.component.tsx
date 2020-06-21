@@ -10,12 +10,13 @@ import {
 } from "azure-devops-extension-api/Release";
 import { PillGroup } from "azure-devops-ui/PillGroup";
 import { Link } from "azure-devops-ui/Link";
+import { ReleaseApprovalRow } from "./releaseapprovalgrid.component";
 
 export function renderGridReleaseInfoCell(
   rowIndex: number,
   columnIndex: number,
-  tableColumn: ITableColumn<{}>,
-  tableItem: any
+  tableColumn: ITableColumn<ReleaseApprovalRow>,
+  tableItem: ReleaseApprovalRow
 ): JSX.Element {
   const approval: ReleaseApproval = tableItem;
   return (
@@ -33,7 +34,7 @@ export interface IGridReleaseInfoCellProps {
   releaseApproval: ReleaseApproval;
   rowIndex: number;
   columnIndex: number;
-  tableColumn: ITableColumn<{}>;
+  tableColumn: ITableColumn<ReleaseApprovalRow>;
 }
 
 export default class GridReleaseInfoCell extends React.Component<

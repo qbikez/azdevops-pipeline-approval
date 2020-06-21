@@ -29,13 +29,26 @@ import { ConditionalChildren } from "azure-devops-ui/ConditionalChildren";
 import ReleaseApprovalForm from "@src-root/hub/components/form/form.component";
 import { ReleaseService } from "@src-root/hub/services/release.service";
 import { renderLastRunColumn } from "./buildinfocell.component";
+import { Build } from "azure-devops-extension-api/Build";
+import { GitCommit, GitPullRequest } from "azure-devops-extension-api/Git";
+import { WorkItem } from "azure-devops-extension-api/WorkItemTracking";
+import { renderWorkItemsColumn } from "./workitemscell.component";
+
+export type ReleaseApprovalRow = ReleaseApproval & {
+  build?: Build;
+  gitCommit?: GitCommit;
+  workItems?: WorkItem[];
+  pr?: GitPullRequest;
+  prId?: string;
+  prName?: string;
+};
 
 export default class ReleaseApprovalGrid extends React.Component {
   private _approvalsService: ReleaseApprovalService = new ReleaseApprovalService();
   private _releaseService: ReleaseService = new ReleaseService();
-  private _tableRowData: ObservableArray<ReleaseApproval> = new ObservableArray<
-    ReleaseApproval
-  >([]);
+  private _tableRowData: ObservableArray<
+    ReleaseApprovalRow
+  > = new ObservableArray<ReleaseApprovalRow>([]);
   private _pageLength: number = 20;
   private _hasMoreItems: ObservableValue<boolean> = new ObservableValue<
     boolean
@@ -55,9 +68,8 @@ export default class ReleaseApprovalGrid extends React.Component {
     ReleaseApprovalAction
   >(ReleaseApprovalAction.Reject);
 
-  private _configureGridColumns(): ITableColumn<{}>[] {
+  private _configureGridColumns(): ITableColumn<ReleaseApprovalRow>[] {
     return [
-      new ColumnSelect() as ITableColumn<{}>,
       {
         id: "pipeline",
         name: "Release",
@@ -72,6 +84,11 @@ export default class ReleaseApprovalGrid extends React.Component {
       {
         id: "buildInfo",
         renderCell: renderLastRunColumn,
+        width: -33,
+      },
+      {
+        id: "workItems",
+        renderCell: renderWorkItemsColumn,
         width: -33,
       },
       {
@@ -167,7 +184,7 @@ export default class ReleaseApprovalGrid extends React.Component {
     }
     const rowShimmer = this.getRowShimmer(1);
     this._tableRowData.push(...rowShimmer);
-    const approvals = await this._approvalsService.findApprovals(
+    const approvals: ReleaseApprovalRow[] = await this._approvalsService.findApprovals(
       this._pageLength,
       continuationToken
     );

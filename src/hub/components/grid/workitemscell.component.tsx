@@ -1,11 +1,23 @@
-import { ITableColumn, TwoLineTableCell } from "azure-devops-ui/Table";
+import {
+  ITableColumn,
+  TwoLineTableCell,
+  SimpleTableCell,
+} from "azure-devops-ui/Table";
 import * as React from "react";
 import { Tooltip } from "azure-devops-ui/TooltipEx";
 import { Link } from "azure-devops-ui/Link";
 import { Icon } from "azure-devops-ui/Icon";
 import { ReleaseApprovalRow } from "./releaseapprovalgrid.component";
+import {
+  List,
+  SimpleList,
+  IListItemDetails,
+  ListItem,
+} from "azure-devops-ui/List";
+import { ArrayItemProvider } from "azure-devops-ui/Utilities/Provider";
+import { WorkItem } from "azure-devops-extension-api/WorkItemTracking";
 
-export function renderLastRunColumn(
+export function renderWorkItemsColumn(
   //   rowIndex: number,
   //   columnIndex: number,
   //   tableColumn: ITableColum`n<IPipelineItem>,
@@ -26,47 +38,17 @@ export function renderLastRunColumn(
   // const releaseTypeText = ReleaseTypeText({ releaseType: releaseType });
   // const tooltip = `${releaseTypeText} from ${branchName} branch`;
   return (
-    <TwoLineTableCell
+    <SimpleTableCell
       className="bolt-table-cell-content-with-inline-link no-v-padding"
       key={"col-" + columnIndex}
       columnIndex={columnIndex}
       tableColumn={tableColumn}
-      line1={
-        <span className="flex-row scroll-hidden">
-          <Tooltip text={text} overflowOnly>
-            <Link
-              className="fontSizeM font-size-m text-ellipsis bolt-table-link bolt-table-inline-link"
-              excludeTabStop
-              href="#pr"
-            >
-              {text}
-            </Link>
-          </Tooltip>
-        </span>
-      }
-      line2={
-        <Tooltip text={tooltip} overflowOnly>
-          <span className="fontSize font-size secondary-text flex-row flex-center text-ellipsis">
-            {ReleaseTypeIcon({ releaseType: releaseType })}
-            <span className="text-ellipsis" key="release-type-text">
-              {prId}
-            </span>
-            <Link
-              className="monospaced-text text-ellipsis flex-row flex-center bolt-table-link bolt-table-inline-link"
-              excludeTabStop
-              href="#branch"
-            >
-              {Icon({
-                className: "icon-margin",
-                iconName: "OpenSource",
-                key: "branch-name",
-              })}
-              {branchName}
-            </Link>
-          </span>
-        </Tooltip>
-      }
-    />
+    >
+      <List
+        itemProvider={new ArrayItemProvider(tableItem.workItems || [])}
+        renderRow={renderTaskRow}
+      />
+    </SimpleTableCell>
   );
 }
 
@@ -121,3 +103,18 @@ interface IStatusIndicatorData {
   //statusProps: IStatusProps;
   label: string;
 }
+
+const renderTaskRow = (
+  index: number,
+  item: WorkItem,
+  details: IListItemDetails<WorkItem>,
+  key?: string
+): JSX.Element => {
+  return (
+    <ListItem key={key || "list-item" + index} index={index} details={details}>
+      <Link href={(item as any).html}>
+        {item.id} {item.fields["System.Title"]}
+      </Link>
+    </ListItem>
+  );
+};
