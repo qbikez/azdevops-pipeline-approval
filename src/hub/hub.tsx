@@ -1,9 +1,8 @@
 import "azure-devops-ui/Core/override.css";
 
+import { SDK, init } from "./mocks/sdkMock";
 import * as React from "react";
 import * as ReactDOM from "react-dom";
-import * as SDK from "azure-devops-extension-sdk";
-import * as XDM from "azure-devops-extension-sdk/XDM";
 import { Header, TitleSize } from "azure-devops-ui/Header";
 import { Page } from "azure-devops-ui/Page";
 import ReleaseApprovalGrid from "@src-root/hub/components/grid/releaseapprovalgrid.component";
@@ -14,16 +13,6 @@ import {
 } from "@src-root/hub/model/ReleaseApprovalEvents";
 import { ObservableArray } from "azure-devops-ui/Core/Observable";
 import { ISelectionRange } from "azure-devops-ui/Utilities/Selection";
-
-interface HandshakeResponse {
-  initialConfig: any;
-  contributionId: string;
-  context: {
-    user: SDK.IUserContext;
-    host: SDK.IHostContext;
-    extension: SDK.IExtensionContext;
-  };
-}
 
 class Hub extends React.Component<{}> {
   _headerToolbar: React.RefObject<Header>;
@@ -38,43 +27,8 @@ class Hub extends React.Component<{}> {
     this._releaseGrid = React.createRef();
     this.initCommandBar();
     this.subscribeEvents();
-
-    const chan = XDM.channelManager.addChannel(window.parent, window.origin);
-    chan.getObjectRegistry().register("DevOps.HostControl", (ctx) => {
-      console.log("channel object factory");
-      console.dir(ctx);
-      return {
-        initialHandshake: (msg: any) => {
-          console.log("initialHandshake");
-          console.dir(msg);
-          const resp: HandshakeResponse = {
-            initialConfig: {},
-            contributionId: "mock",
-            context: {
-              extension: {
-                extensionId: "mock-extension",
-                id: "mock-ext-id",
-                publisherId: "mock-publisher",
-                version: "0.0.0",
-              },
-              user: {
-                descriptor: "",
-                displayName: "mock-user",
-                id: "mock-user-id",
-                imageUrl: "http://example.org",
-                name: "mock-user-name",
-              },
-              host: {
-                id: "mock-host-id",
-                name: "mock-host",
-                serviceVersion: "0.0.0",
-                type: SDK.HostType.Organization,
-              },
-            },
-          };
-          return resp;
-        },
-      };
+    init({
+      mock: true,
     });
     SDK.init();
   }

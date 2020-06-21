@@ -15,8 +15,9 @@
     "types": ["react"],
     "baseUrl": "./",
     "paths": {
-      "@src-root/*": [ "src/*" ]
+      "@src-root/*": ["src/*"]
     },
+    "resolveJsonModule": true
   },
   "exclude": ["node_modules", "typings"]
 }

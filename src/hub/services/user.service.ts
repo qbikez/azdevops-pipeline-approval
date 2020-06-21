@@ -1,12 +1,11 @@
-import * as SDK from "azure-devops-extension-sdk";
+import { SDK } from "../mocks/sdkMock";
 
 export class UserService {
+  constructor() {
+    // SDK.init();
+  }
 
-    constructor() {
-        // SDK.init();
-    }
-
-    isLoggedUser(id: string): boolean {
-        return SDK.getUser().id === id;
-    }
+  isLoggedUser(id: string): boolean {
+    return SDK.getUser().id === id;
+  }
 }
