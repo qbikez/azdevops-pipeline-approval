@@ -28,6 +28,7 @@ import { Button } from "azure-devops-ui/Button";
 import { ConditionalChildren } from "azure-devops-ui/ConditionalChildren";
 import ReleaseApprovalForm from "@src-root/hub/components/form/form.component";
 import { ReleaseService } from "@src-root/hub/services/release.service";
+import { renderLastRunColumn } from "./buildinfocell.component";
 
 export default class ReleaseApprovalGrid extends React.Component {
   private _approvalsService: ReleaseApprovalService = new ReleaseApprovalService();
@@ -67,6 +68,11 @@ export default class ReleaseApprovalGrid extends React.Component {
         id: "releaseInfo",
         renderCell: renderGridReleaseInfoCell,
         width: -40,
+      },
+      {
+        id: "buildInfo",
+        renderCell: renderLastRunColumn,
+        width: -33,
       },
       {
         id: "approverInfo",

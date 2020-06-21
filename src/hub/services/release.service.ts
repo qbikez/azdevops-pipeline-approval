@@ -8,6 +8,7 @@ import {
 
 import { BuildRestClient } from "azure-devops-extension-api/Build";
 import { WorkItemTrackingRestClient } from "azure-devops-extension-api/WorkItemTracking";
+import { GitRestClient } from "azure-devops-extension-api/Git";
 import {
   IProjectPageService,
   CommonServiceIds,
@@ -16,40 +17,57 @@ import { SDK, getClient } from "../mocks/sdkMock";
 
 export class ReleaseService {
   async getWorkItems(releaseApproval: ReleaseApproval) {
-    const projectService = await SDK.getService<IProjectPageService>(
-      CommonServiceIds.ProjectPageService
-    );
-    const project = await projectService.getProject();
-    if (!project) return;
+    try {
+      const projectService = await SDK.getService<IProjectPageService>(
+        CommonServiceIds.ProjectPageService
+      );
+      const project = await projectService.getProject();
+      if (!project) return;
 
-    const client: ReleaseRestClient = getClient(ReleaseRestClient);
-    const release = await client.getRelease(
-      project.name,
-      releaseApproval.release.id
-    );
+      const client: ReleaseRestClient = getClient(ReleaseRestClient);
+      const release = await client.getRelease(
+        project.name,
+        releaseApproval.release.id
+      );
 
-    const buildArtifact = release.artifacts.find((a) => a.type === "Build");
-    const buildId = (buildArtifact?.definitionReference as {
-      version?: { id: string; name: string };
-    })?.version?.id;
+      const buildArtifact = release.artifacts.find((a) => a.type === "Build");
+      const buildId = (buildArtifact?.definitionReference as {
+        version?: { id: string; name: string };
+      })?.version?.id;
 
-    if (!buildId) return;
+      if (!buildId) return;
 
-    const buildClient = getClient(BuildRestClient);
+      const buildClient = getClient(BuildRestClient);
 
-    const workItemRefs = await buildClient.getBuildWorkItemsRefs(
-      project.name,
-      Number.parseInt(buildId)
-    );
+      const build = await buildClient.getBuild(
+        project.name,
+        Number.parseInt(buildId)
+      );
 
-    const workClient = getClient(WorkItemTrackingRestClient);
+      const gitClient = getClient(GitRestClient);
 
-    const workItems = await workClient.getWorkItems(
-      workItemRefs.map((w) => Number.parseInt(w.id))
-    );
+      const commit = await gitClient.getCommit(
+        build.sourceVersion,
+        build.repository.id
+      );
 
-    console.dir(workItems);
-    return workItems;
+      const workItemRefs = await buildClient.getBuildWorkItemsRefs(
+        project.name,
+        Number.parseInt(buildId)
+      );
+
+      const workClient = getClient(WorkItemTrackingRestClient);
+
+      const workItems = await workClient.getWorkItems(
+        workItemRefs.map((w) => Number.parseInt(w.id))
+      );
+
+      console.log(commit.author);
+      console.log(commit.comment);
+      return workItems;
+    } catch (err) {
+      console.error(err);
+    }
   }
 
   async getLinks(releaseApproval: ReleaseApproval): Promise<void> {
