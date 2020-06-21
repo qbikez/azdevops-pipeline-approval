@@ -3,19 +3,34 @@ import "azure-devops-ui/Core/override.css";
 import * as React from "react";
 import * as ReactDOM from "react-dom";
 import * as SDK from "azure-devops-extension-sdk";
+import * as XDM from "azure-devops-extension-sdk/XDM";
 import { Header, TitleSize } from "azure-devops-ui/Header";
 import { Page } from "azure-devops-ui/Page";
 import ReleaseApprovalGrid from "@src-root/hub/components/grid/releaseapprovalgrid.component";
 import { IHeaderCommandBarItem } from "azure-devops-ui/HeaderCommandBar";
-import { ReleaseApprovalEvents, EventType } from "@src-root/hub/model/ReleaseApprovalEvents";
+import {
+  ReleaseApprovalEvents,
+  EventType,
+} from "@src-root/hub/model/ReleaseApprovalEvents";
 import { ObservableArray } from "azure-devops-ui/Core/Observable";
 import { ISelectionRange } from "azure-devops-ui/Utilities/Selection";
 
-class Hub extends React.Component<{}> {
+interface HandshakeResponse {
+  initialConfig: any;
+  contributionId: string;
+  context: {
+    user: SDK.IUserContext;
+    host: SDK.IHostContext;
+    extension: SDK.IExtensionContext;
+  };
+}
 
+class Hub extends React.Component<{}> {
   _headerToolbar: React.RefObject<Header>;
   _releaseGrid: React.RefObject<ReleaseApprovalGrid>;
-  _commandBarItems: ObservableArray<IHeaderCommandBarItem> = new ObservableArray<IHeaderCommandBarItem>([]);
+  _commandBarItems: ObservableArray<
+    IHeaderCommandBarItem
+  > = new ObservableArray<IHeaderCommandBarItem>([]);
 
   constructor(props: {}) {
     super(props);
@@ -23,6 +38,44 @@ class Hub extends React.Component<{}> {
     this._releaseGrid = React.createRef();
     this.initCommandBar();
     this.subscribeEvents();
+
+    const chan = XDM.channelManager.addChannel(window.parent, window.origin);
+    chan.getObjectRegistry().register("DevOps.HostControl", (ctx) => {
+      console.log("channel object factory");
+      console.dir(ctx);
+      return {
+        initialHandshake: (msg: any) => {
+          console.log("initialHandshake");
+          console.dir(msg);
+          const resp: HandshakeResponse = {
+            initialConfig: {},
+            contributionId: "mock",
+            context: {
+              extension: {
+                extensionId: "mock-extension",
+                id: "mock-ext-id",
+                publisherId: "mock-publisher",
+                version: "0.0.0",
+              },
+              user: {
+                descriptor: "",
+                displayName: "mock-user",
+                id: "mock-user-id",
+                imageUrl: "http://example.org",
+                name: "mock-user-name",
+              },
+              host: {
+                id: "mock-host-id",
+                name: "mock-host",
+                serviceVersion: "0.0.0",
+                type: SDK.HostType.Organization,
+              },
+            },
+          };
+          return resp;
+        },
+      };
+    });
     SDK.init();
   }
 
@@ -34,7 +87,8 @@ class Hub extends React.Component<{}> {
           title={"Releases to Approve"}
           titleSize={TitleSize.Medium}
           titleIconProps={{ iconName: "Rocket" }}
-          commandBarItems={this._commandBarItems} />
+          commandBarItems={this._commandBarItems}
+        />
         <div className="page-content page-content-top">
           <ReleaseApprovalGrid ref={this._releaseGrid} />
         </div>
@@ -47,8 +101,13 @@ class Hub extends React.Component<{}> {
   }
 
   private subscribeEvents(): void {
-    ReleaseApprovalEvents.subscribe(EventType.GridRowSelectionChanged,
-      async (selection: ISelectionRange[], action: string, selectedItemsCount: number) => {
+    ReleaseApprovalEvents.subscribe(
+      EventType.GridRowSelectionChanged,
+      async (
+        selection: ISelectionRange[],
+        action: string,
+        selectedItemsCount: number
+      ) => {
         const hasSelection = selectedItemsCount > 0;
         if (hasSelection) {
           this._commandBarItems.removeAll();
@@ -60,39 +119,40 @@ class Hub extends React.Component<{}> {
         } else if (this._commandBarItems.length > 1) {
           this._commandBarItems.splice(0, 2);
         }
-      });
+      }
+    );
   }
 
   private _buttonApproveSelected: IHeaderCommandBarItem = {
     id: "approve-selected",
     iconProps: {
-      iconName: "CheckMark"
+      iconName: "CheckMark",
     },
     important: true,
     onActivate: () => ReleaseApprovalEvents.fire(EventType.ApproveAllReleases),
     text: "Approve Selected",
-    isPrimary: true
+    isPrimary: true,
   };
 
   private _buttonRejectSelected: IHeaderCommandBarItem = {
     id: "reject-selected",
     iconProps: {
-      iconName: "Cancel"
+      iconName: "Cancel",
     },
     important: true,
     className: "danger",
     onActivate: () => ReleaseApprovalEvents.fire(EventType.RejectAllReleases),
-    text: "Reject Selected"
+    text: "Reject Selected",
   };
 
   private _buttonRefresh: IHeaderCommandBarItem = {
     id: "refresh",
     iconProps: {
-      iconName: "Refresh"
+      iconName: "Refresh",
     },
     important: true,
     onActivate: () => ReleaseApprovalEvents.fire(EventType.RefreshGrid),
-    text: "Refresh"
+    text: "Refresh",
   };
 }
 
