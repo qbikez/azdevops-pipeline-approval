@@ -1,9 +1,20 @@
-import * as config from "./_local.config.json";
 import * as realSDK from "azure-devops-extension-sdk";
 import * as API from "azure-devops-extension-api";
 import { ReleaseRestClient } from "azure-devops-extension-api/Release";
 
 let useMocks = false;
+declare var process: {
+  env: {
+    [key: string]: string;
+  };
+};
+
+const config = {
+  organization: process?.env.DEVOPS_ORG,
+  authHeader: `Bearer ${process?.env.DEVOPS_TOKEN}`,
+  projectName: process?.env.DEVOPS_PROJECT,
+  userId: process?.env.DEVOPS_USER,
+};
 
 export function init(options: { mock: boolean }) {
   useMocks = options.mock;

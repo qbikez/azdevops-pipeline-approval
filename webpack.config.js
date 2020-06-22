@@ -2,42 +2,43 @@ const path = require("path");
 const fs = require("fs");
 const CopyWebpackPlugin = require("copy-webpack-plugin");
 const TsconfigPathsPlugin = require("tsconfig-paths-webpack-plugin");
+const Dotenv = require("dotenv-webpack");
 
 const entries = {};
 const srcDir = path.join(__dirname, "src");
 fs.readdirSync(srcDir)
-  .filter(dir => fs.statSync(path.join(srcDir, dir)).isDirectory())
-  .forEach(dir => (entries[dir] = "./" + path.join("src", dir, dir)));
+  .filter((dir) => fs.statSync(path.join(srcDir, dir)).isDirectory())
+  .forEach((dir) => (entries[dir] = "./" + path.join("src", dir, dir)));
 
 module.exports = {
   target: "web",
   entry: entries,
   output: {
     filename: "[name]/[name].js",
-    publicPath: "/dist/"
+    publicPath: "/dist/",
   },
   devtool: "inline-source-map",
   devServer: {
     https: false,
-    port: 3000
+    port: 3000,
   },
   resolve: {
     extensions: [".ts", ".tsx", ".js"],
     alias: {
       "azure-devops-extension-sdk": path.resolve(
         "node_modules/azure-devops-extension-sdk"
-      )
+      ),
     },
-    plugins: [new TsconfigPathsPlugin()]
+    plugins: [new TsconfigPathsPlugin()],
   },
   stats: {
-    warnings: false
+    warnings: false,
   },
   module: {
     rules: [
       {
         test: /\.tsx?$/,
-        use: "ts-loader"
+        use: "ts-loader",
       },
       {
         test: /\.scss$/,
@@ -45,26 +46,32 @@ module.exports = {
           "style-loader",
           "css-loader",
           "azure-devops-ui/buildScripts/css-variables-loader",
-          "sass-loader"
-        ]
+          "sass-loader",
+        ],
       },
       {
         test: /\.css$/,
-        use: ["style-loader", "css-loader"]
+        use: ["style-loader", "css-loader"],
       },
       {
         test: /\.woff$/,
         use: [
           {
-            loader: "base64-inline-loader"
-          }
-        ]
+            loader: "base64-inline-loader",
+          },
+        ],
       },
       {
         test: /\.html$/,
-        use: "file-loader"
-      }
-    ]
+        use: "file-loader",
+      },
+    ],
   },
-  plugins: [new CopyWebpackPlugin([{ from: "**/*.html", context: "src" }])]
+  plugins: [
+    new CopyWebpackPlugin([{ from: "**/*.html", context: "src" }]),
+    new Dotenv({
+      path: "./.env",
+      systemvars: true,
+    }),
+  ],
 };
