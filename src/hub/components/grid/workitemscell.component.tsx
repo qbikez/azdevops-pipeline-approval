@@ -16,6 +16,10 @@ import {
 } from "azure-devops-ui/List";
 import { ArrayItemProvider } from "azure-devops-ui/Utilities/Provider";
 import { WorkItem } from "azure-devops-extension-api/WorkItemTracking";
+import { PillSize, Pill, PillVariant } from "azure-devops-ui/Pill";
+import { PillGroup } from "azure-devops-ui/PillGroup";
+import { StatusSize, Status, Statuses } from "azure-devops-ui/Status";
+import { Colors } from "@src-root/hub/model/Colors";
 
 export function renderWorkItemsColumn(
   _rowIndex: number,
@@ -96,11 +100,81 @@ const renderTaskRow = (
   details: IListItemDetails<WorkItem>,
   key?: string
 ): JSX.Element => {
+  const state = item.fields["System.State"];
+  let stateColor = "neutral";
+  switch (state) {
+    case "In Progress":
+    case "Checked-In":
+    case "In QA":
+      stateColor = "active";
+      break;
+    case "Live":
+    case "Done":
+      stateColor = "success";
+      break;
+  }
+
   return (
     <ListItem key={key || "list-item" + index} index={index} details={details}>
-      <Link href={(item as any).html}>
-        {item.id} {item.fields["System.Title"]}
-      </Link>
+      <div
+        style={{ marginLeft: "10px", padding: "10px 0px" }}
+        className="flex-column h-scroll-hidden"
+      >
+        <span className="text-ellipsis">
+          <Link
+            className="fontSizeM font-size-m text-ellipsis bolt-table-link bolt-table-inline-link"
+            excludeTabStop
+            href={(item as any).html}
+          >
+            {item.id} {item.fields["System.Title"]}
+          </Link>
+        </span>
+        <span className="fontSizeMS font-size-ms text-ellipsis secondary-text">
+          <PillGroup className="flex-row">
+            <Pill size={PillSize.compact}>
+              QA: {item.fields["Custom.QA"] || "?"}
+            </Pill>
+            <Status
+              size={StatusSize.s}
+              color={stateColor}
+              onRenderIcon={(className, size, animated, ariaLabel) => {
+                return React.createElement(
+                  Svg,
+                  {
+                    ariaLabel: ariaLabel,
+                    className,
+                    size,
+                    viewBox: "0 0 12 12",
+                    "vertical-align": "middle",
+                  },
+                  React.createElement("circle", { cx: "6", cy: "6", r: "6" })
+                );
+              }}
+            />
+            {state}
+          </PillGroup>
+        </span>
+
+        {console.dir(item)}
+      </div>
     </ListItem>
   );
 };
+
+function Svg(props: any) {
+  var role = props.ariaLabel ? "img" : "presentation";
+  //var descId = props.ariaLabel ? getSafeId("status-" + statusId++ + "-desc") : undefined;
+  return React.createElement(
+    "svg",
+    {
+      className: props.className,
+      height: props.size,
+      role: role,
+      viewBox: props.viewBox,
+      width: props.size,
+      xmlns: "http://www.w3.org/2000/svg",
+    },
+    props.ariaLabel && React.createElement("desc", {}, props.ariaLabel),
+    props.children
+  );
+}

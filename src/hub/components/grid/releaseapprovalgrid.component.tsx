@@ -79,23 +79,25 @@ export default class ReleaseApprovalGrid extends React.Component {
       {
         id: "releaseInfo",
         renderCell: renderGridReleaseInfoCell,
-        width: -40,
+        width: 200,
       },
       {
         id: "buildInfo",
+        name: "Pull Request",
         renderCell: renderLastRunColumn,
-        width: -33,
+        width: -60,
       },
       {
         id: "workItems",
+        name: "Work Items",
         renderCell: renderWorkItemsColumn,
-        width: -33,
+        width: -60,
       },
       {
         id: "approverInfo",
         name: "Approval Status",
         renderCell: renderGridApproverInfoCell,
-        width: -60,
+        width: -30,
       },
       {
         id: "actions",

@@ -29,7 +29,10 @@ export class ReleaseService {
       const project = await projectService.getProject();
       if (!project) return;
 
-      const release = await this.getRelease(project, releaseApproval);
+      const release = await this.getRelease(
+        project,
+        releaseApproval.release.id
+      );
       const build = await this.getBuild(project, release);
 
       if (!build) {
@@ -136,15 +139,9 @@ export class ReleaseService {
     return build;
   }
 
-  private async getRelease(
-    project: IProjectInfo,
-    releaseApproval: ReleaseApprovalRow
-  ) {
+  private async getRelease(project: IProjectInfo, releaseId: number) {
     const client: ReleaseRestClient = getClient(ReleaseRestClient);
-    const release = await client.getRelease(
-      project.name,
-      releaseApproval.release.id
-    );
+    const release = await client.getRelease(project.name, releaseId);
     return release;
   }
 
