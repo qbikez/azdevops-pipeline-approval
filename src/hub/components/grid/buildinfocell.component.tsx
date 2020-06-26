@@ -11,9 +11,10 @@ export function renderLastRunColumn(
   tableColumn: ITableColumn<ReleaseApprovalRow>,
   tableItem: ReleaseApprovalRow
 ): JSX.Element {
-  const prId = tableItem.pr?.pullRequestId;
-  const prName = tableItem.pr?.title || tableItem.prName;
-  const branchName = tableItem.build?.sourceBranch;
+  const info = tableItem.info;
+  const prId = info?.pr?.pullRequestId;
+  const prName = info?.pr?.title || info?.prName;
+  const branchName = info?.build?.sourceBranch;
   const text = "#" + prId + " \u00b7 " + prName;
   const tooltip = "";
   // const releaseTypeText = ReleaseTypeText({ releaseType: releaseType });
@@ -30,7 +31,7 @@ export function renderLastRunColumn(
             <Link
               className="fontSizeM font-size-m text-ellipsis bolt-table-link bolt-table-inline-link"
               excludeTabStop
-              href={(tableItem.pr as any)?.webUrl}
+              href={(info?.pr as any)?.webUrl}
             >
               {text}
             </Link>

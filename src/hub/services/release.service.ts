@@ -8,38 +8,49 @@ import {
 } from "azure-devops-extension-api/Release";
 
 import { BuildRestClient, Build } from "azure-devops-extension-api/Build";
-import { WorkItemTrackingRestClient } from "azure-devops-extension-api/WorkItemTracking";
-import { GitRestClient, GitCommit } from "azure-devops-extension-api/Git";
+import {
+  WorkItemTrackingRestClient,
+  WorkItem,
+} from "azure-devops-extension-api/WorkItemTracking";
+import {
+  GitRestClient,
+  GitCommit,
+  GitPullRequest,
+} from "azure-devops-extension-api/Git";
 import {
   IProjectPageService,
   CommonServiceIds,
   IProjectInfo,
 } from "azure-devops-extension-api";
 import { SDK, getClient } from "../mocks/sdkMock";
-import { ReleaseApprovalRow } from "../components/grid/releaseapprovalgrid.component";
 import { ResourceRef } from "azure-devops-extension-api/WebApi";
 
+export interface ReleaseInfo {
+  build?: Build;
+  buildWorkItems?: WorkItem[];
+  prWorkItems?: WorkItem[];
+  pr?: GitPullRequest;
+  prId?: number;
+  prName?: string;
+}
+
 export class ReleaseService {
-  async fillWorkItems(releaseApproval: ReleaseApprovalRow) {
+  async getReleaseDetails(releaseId: number): Promise<ReleaseInfo> {
+    let releaseInfo: ReleaseInfo = {};
     try {
       const organization = SDK.getHost().name;
       const projectService = await SDK.getService<IProjectPageService>(
         CommonServiceIds.ProjectPageService
       );
       const project = await projectService.getProject();
-      if (!project) return;
+      if (!project) return releaseInfo;
 
-      const release = await this.getRelease(
-        project,
-        releaseApproval.release.id
-      );
+      const release = await this.getRelease(project, releaseId);
       const build = await this.getBuild(project, release);
 
-      if (!build) {
-        return;
-      }
+      if (!build) return releaseInfo;
 
-      releaseApproval.build = build;
+      releaseInfo.build = build;
 
       const workItemRefs = await this.getBuildWorkItems(project, build);
       const workItems = await this.getWorkItems(
@@ -48,25 +59,26 @@ export class ReleaseService {
         project
       );
 
-      releaseApproval.buildWorkItems = workItems;
+      releaseInfo.buildWorkItems = workItems;
 
       const { pr, name: prName } = await this.getPr(project, build);
 
       if (pr) {
-        releaseApproval.pr = pr;
-        releaseApproval.prId = pr?.pullRequestId;
-        releaseApproval.prName = prName;
+        releaseInfo.pr = pr;
+        releaseInfo.prId = pr?.pullRequestId;
+        releaseInfo.prName = prName;
 
         const prWorkItems = await this.getWorkItems(
           pr.workItemRefs,
           organization,
           project
         );
-        releaseApproval.prWorkItems = prWorkItems;
+        releaseInfo.prWorkItems = prWorkItems;
       }
     } catch (err) {
       console.error(err);
     }
+    return releaseInfo;
   }
 
   private async getBuildWorkItems(project: IProjectInfo, build: Build) {

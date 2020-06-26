@@ -19,7 +19,9 @@ import {
   EventType,
 } from "@src-root/hub/model/ReleaseApprovalEvents";
 import { renderGridPipelineCell } from "@src-root/hub/components/grid/pipelinecell.component";
-import { renderGridReleaseInfoCell } from "@src-root/hub/components/grid/releaseinfocell.component";
+import GridReleaseInfoCell, {
+  renderGridReleaseInfoCell,
+} from "@src-root/hub/components/grid/releaseinfocell.component";
 import { renderGridApproverInfoCell } from "@src-root/hub/components/grid/approverinfocell.component";
 import { renderGridActionsCell } from "@src-root/hub/components/grid/actionscell.component";
 import { Card } from "azure-devops-ui/Card";
@@ -27,7 +29,10 @@ import { ReleaseApproval } from "azure-devops-extension-api/Release";
 import { Button } from "azure-devops-ui/Button";
 import { ConditionalChildren } from "azure-devops-ui/ConditionalChildren";
 import ReleaseApprovalForm from "@src-root/hub/components/form/form.component";
-import { ReleaseService } from "@src-root/hub/services/release.service";
+import {
+  ReleaseService,
+  ReleaseInfo,
+} from "@src-root/hub/services/release.service";
 import { renderLastRunColumn } from "./buildinfocell.component";
 import { Build } from "azure-devops-extension-api/Build";
 import { GitCommit, GitPullRequest } from "azure-devops-extension-api/Git";
@@ -35,12 +40,7 @@ import { WorkItem } from "azure-devops-extension-api/WorkItemTracking";
 import { renderWorkItemsColumn } from "./workitemscell.component";
 
 export type ReleaseApprovalRow = ReleaseApproval & {
-  build?: Build;
-  buildWorkItems?: WorkItem[];
-  prWorkItems?: WorkItem[];
-  pr?: GitPullRequest;
-  prId?: number;
-  prName?: string;
+  info?: ReleaseInfo;
 };
 
 export default class ReleaseApprovalGrid extends React.Component {
@@ -197,7 +197,8 @@ export default class ReleaseApprovalGrid extends React.Component {
 
     await Promise.all(
       approvals.map(async (a) => {
-        await this._releaseService.fillWorkItems(a);
+        const info = await this._releaseService.getReleaseDetails(a.release.id);
+        a.info = info;
       })
     );
     this._hasMoreItems.value = this._pageLength == approvals.length;

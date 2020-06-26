@@ -35,7 +35,7 @@ export function renderWorkItemsColumn(
       tableColumn={tableColumn}
     >
       <List
-        itemProvider={new ArrayItemProvider(tableItem.prWorkItems || [])}
+        itemProvider={new ArrayItemProvider(tableItem.info?.prWorkItems || [])}
         renderRow={renderTaskRow}
       />
     </SimpleTableCell>
