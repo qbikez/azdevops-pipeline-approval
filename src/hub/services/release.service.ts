@@ -39,7 +39,10 @@ export interface ReleaseInfo {
 }
 
 export class ReleaseService {
-  async getReleaseInfo(releaseId: number): Promise<ReleaseInfo> {
+  async getReleaseInfo(
+    releaseId: number,
+    includeNextReleases: boolean = false
+  ): Promise<ReleaseInfo> {
     try {
       const organization = SDK.getHost().name;
       const projectService = await SDK.getService<IProjectPageService>(
@@ -49,7 +52,9 @@ export class ReleaseService {
       if (!project) return {};
 
       const release = await this.getRelease(project, releaseId);
-      const nextReleases = await this.getReleasesAfter(project, release);
+      const nextReleases = includeNextReleases
+        ? await this.getReleasesAfter(project, release)
+        : undefined;
 
       const releaseInfo = await this.getSingleReleaseDetails(
         organization,

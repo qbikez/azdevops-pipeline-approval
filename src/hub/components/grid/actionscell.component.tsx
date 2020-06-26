@@ -7,7 +7,10 @@ import {
   EventType,
 } from "@src-root/hub/model/ReleaseApprovalEvents";
 import { ReleaseApproval } from "azure-devops-extension-api/Release";
-import { ReleaseApprovalRow } from "./releaseapprovalgrid.component";
+import {
+  ReleaseApprovalRow,
+  ReleaseApprovalEx,
+} from "./releaseapprovalgrid.component";
 
 export function renderGridActionsCell(
   rowIndex: number,
@@ -15,7 +18,7 @@ export function renderGridActionsCell(
   tableColumn: ITableColumn<ReleaseApprovalRow>,
   tableItem: ReleaseApprovalRow
 ): JSX.Element {
-  const approval: ReleaseApproval = tableItem;
+  const approval: ReleaseApprovalEx = tableItem.underlyingItem.data;
   return (
     <GridActionsCell
       key={`col-actions-${columnIndex}-${rowIndex}`}

@@ -3,7 +3,10 @@ import * as React from "react";
 import { Tooltip } from "azure-devops-ui/TooltipEx";
 import { Link } from "azure-devops-ui/Link";
 import { Icon } from "azure-devops-ui/Icon";
-import { ReleaseApprovalRow } from "./releaseapprovalgrid.component";
+import {
+  ReleaseApprovalRow,
+  ReleaseApprovalEx,
+} from "./releaseapprovalgrid.component";
 
 export function renderLastRunColumn(
   _rowIndex: number,
@@ -11,7 +14,9 @@ export function renderLastRunColumn(
   tableColumn: ITableColumn<ReleaseApprovalRow>,
   tableItem: ReleaseApprovalRow
 ): JSX.Element {
-  const info = tableItem.info;
+  const approval: ReleaseApprovalEx = tableItem.underlyingItem.data;
+
+  const info = approval.info;
   const prId = info?.pr?.pullRequestId;
   const prName = info?.pr?.title || info?.prName;
   const branchName = info?.build?.sourceBranch;

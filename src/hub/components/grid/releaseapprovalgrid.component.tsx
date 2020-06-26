@@ -1,6 +1,6 @@
 import * as React from "react";
 import * as SDK from "azure-devops-extension-sdk";
-import { Table, ITableColumn, ColumnSelect } from "azure-devops-ui/Table";
+import { Tree, ITreeColumn } from "azure-devops-ui/TreeEx";
 import {
   ObservableArray,
   ObservableValue,
@@ -19,9 +19,7 @@ import {
   EventType,
 } from "@src-root/hub/model/ReleaseApprovalEvents";
 import { renderGridPipelineCell } from "@src-root/hub/components/grid/pipelinecell.component";
-import GridReleaseInfoCell, {
-  renderGridReleaseInfoCell,
-} from "@src-root/hub/components/grid/releaseinfocell.component";
+import { renderGridReleaseInfoCell } from "@src-root/hub/components/grid/releaseinfocell.component";
 import { renderGridApproverInfoCell } from "@src-root/hub/components/grid/approverinfocell.component";
 import { renderGridActionsCell } from "@src-root/hub/components/grid/actionscell.component";
 import { Card } from "azure-devops-ui/Card";
@@ -34,14 +32,14 @@ import {
   ReleaseInfo,
 } from "@src-root/hub/services/release.service";
 import { renderLastRunColumn } from "./buildinfocell.component";
-import { Build } from "azure-devops-extension-api/Build";
-import { GitCommit, GitPullRequest } from "azure-devops-extension-api/Git";
-import { WorkItem } from "azure-devops-extension-api/WorkItemTracking";
 import { renderWorkItemsColumn } from "./workitemscell.component";
+import { ITreeItemEx } from "azure-devops-ui/Utilities/TreeItemProvider";
 
-export type ReleaseApprovalRow = ReleaseApproval & {
+export type ReleaseApprovalEx = ReleaseApproval & {
   info?: ReleaseInfo;
 };
+
+export type ReleaseApprovalRow = ITreeItemEx<ReleaseApprovalEx>;
 
 export default class ReleaseApprovalGrid extends React.Component {
   private _approvalsService: ReleaseApprovalService = new ReleaseApprovalService();
@@ -68,7 +66,7 @@ export default class ReleaseApprovalGrid extends React.Component {
     ReleaseApprovalAction
   >(ReleaseApprovalAction.Reject);
 
-  private _configureGridColumns(): ITableColumn<ReleaseApprovalRow>[] {
+  private _configureGridColumns(): ITreeColumn<ReleaseApprovalEx>[] {
     return [
       {
         id: "pipeline",
@@ -160,7 +158,7 @@ export default class ReleaseApprovalGrid extends React.Component {
             className="flex-grow bolt-table-card"
             contentProps={{ contentPadding: false }}
           >
-            <Table
+            <Tree<ReleaseApprovalEx>
               columns={this._configureGridColumns()}
               itemProvider={this._tableRowData}
               selection={this._selection}
@@ -181,12 +179,12 @@ export default class ReleaseApprovalGrid extends React.Component {
     let continuationToken = 0;
     const lastIndex = this._tableRowData.value.length - 1;
     if (lastIndex >= 0) {
-      const lastItem = this._tableRowData.value[lastIndex];
+      const lastItem = this._tableRowData.value[lastIndex].underlyingItem.data;
       continuationToken = lastItem.id - 1;
     }
     const rowShimmer = this.getRowShimmer(1);
     this._tableRowData.push(...rowShimmer);
-    const approvals: ReleaseApprovalRow[] = await this._approvalsService.findApprovals(
+    const approvals: ReleaseApprovalEx[] = await this._approvalsService.findApprovals(
       this._pageLength,
       continuationToken
     );
@@ -203,11 +201,27 @@ export default class ReleaseApprovalGrid extends React.Component {
     );
     this._hasMoreItems.value = this._pageLength == approvals.length;
     this._tableRowData.pop();
-    this._tableRowData.push(
-      ...approvals.filter((a) =>
-        this._tableRowData.value.every((x) => x.id !== a.id)
-      )
+
+    const notInTable = approvals.filter((a) =>
+      this._tableRowData.value.every((x) => x.underlyingItem.data.id !== a.id)
     );
+    const rows = await Promise.all(
+      notInTable.map(async (a) => {
+        const row = toRow(a);
+        const nextRows =
+          a.info?.nextReleases?.map(async (next) => {
+            const info = await this._releaseService.getReleaseInfo(next.id);
+            const child: ReleaseApprovalEx = {
+              info,
+            } as ReleaseApprovalEx;
+            const childRow = toRow(child);
+            return childRow.underlyingItem;
+          }) || [];
+        row.underlyingItem.childItems = await Promise.all(nextRows);
+        return row;
+      })
+    );
+    this._tableRowData.push(...rows);
   };
 
   private getRowShimmer(length: number): any[] {
@@ -266,17 +280,15 @@ export default class ReleaseApprovalGrid extends React.Component {
   private getSelectedReleases(): void {
     this._selectedReleases = new ArrayItemProvider<ReleaseApproval>([]);
     let releases: Array<ReleaseApproval> = new Array<ReleaseApproval>();
-    this._selection.value.forEach(
-      (range: ISelectionRange, rangeIndex: number) => {
-        for (
-          let index: number = range.beginIndex;
-          index <= range.endIndex;
-          index++
-        ) {
-          releases.push(this._tableRowData.value[index]);
-        }
+    this._selection.value.forEach((range: ISelectionRange) => {
+      for (
+        let index: number = range.beginIndex;
+        index <= range.endIndex;
+        index++
+      ) {
+        releases.push(this._tableRowData.value[index].underlyingItem.data);
       }
-    );
+    });
     this._selectedReleases = new ArrayItemProvider<ReleaseApproval>(releases);
   }
 
@@ -289,4 +301,13 @@ export default class ReleaseApprovalGrid extends React.Component {
       message: message,
     });
   }
+}
+function toRow(release: ReleaseApprovalEx): ReleaseApprovalRow {
+  const row: ReleaseApprovalRow = {
+    depth: 2,
+    underlyingItem: {
+      data: release,
+    },
+  };
+  return row;
 }

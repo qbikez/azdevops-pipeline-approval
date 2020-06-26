@@ -8,7 +8,10 @@ import { Status, Statuses, StatusSize } from "azure-devops-ui/Status";
 import { Tooltip } from "azure-devops-ui/TooltipEx";
 import { ReleaseApproval } from "azure-devops-extension-api/Release";
 import { Link } from "azure-devops-ui/Link";
-import { ReleaseApprovalRow } from "./releaseapprovalgrid.component";
+import {
+  ReleaseApprovalRow,
+  ReleaseApprovalEx,
+} from "./releaseapprovalgrid.component";
 import { tableProperties } from "office-ui-fabric-react";
 
 export function renderGridPipelineCell(
@@ -17,7 +20,7 @@ export function renderGridPipelineCell(
   tableColumn: ITableColumn<ReleaseApprovalRow>,
   tableItem: ReleaseApprovalRow
 ): JSX.Element {
-  const approval: ReleaseApproval = tableItem;
+  const approval: ReleaseApprovalEx = tableItem.underlyingItem.data;
   return (
     <GridPipelineCell
       key={`col-pipeline-${columnIndex}-${rowIndex}`}
@@ -30,7 +33,7 @@ export function renderGridPipelineCell(
 }
 
 export interface IGridPipelineCellProps {
-  releaseApproval: ReleaseApprovalRow;
+  releaseApproval: ReleaseApproval;
   rowIndex: number;
   columnIndex: number;
   tableColumn: ITableColumn<ReleaseApprovalRow>;
@@ -44,13 +47,14 @@ export default class GridPipelineCell extends React.Component<
   }
 
   render(): JSX.Element {
-    const releaseDefinition = this.props.releaseApproval.releaseDefinition;
+    const approval: ReleaseApprovalEx = this.props.releaseApproval;
+    const releaseDefinition = approval.releaseDefinition;
     const releaseDefinitionName = releaseDefinition.name;
     const link =
       releaseDefinition._links && releaseDefinition._links.web
         ? releaseDefinition._links.web.href
         : "";
-    const behind = this.props.releaseApproval.info?.nextReleases?.length;
+    const behind = approval.info?.nextReleases?.length;
     return (
       <TwoLineTableCell<ReleaseApprovalRow>
         columnIndex={this.props.columnIndex}
@@ -73,7 +77,7 @@ export default class GridPipelineCell extends React.Component<
           </Tooltip>
         }
         line2={
-          <div class="fontSize font-size secondary-text flex-row flex-center text-ellipsis">
+          <div className="fontSize font-size secondary-text flex-row flex-center text-ellipsis">
             {behind ? `${behind} behind` : ""}
           </div>
         }

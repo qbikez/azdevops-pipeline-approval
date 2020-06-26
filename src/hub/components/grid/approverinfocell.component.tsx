@@ -6,7 +6,10 @@ import { Icon } from "azure-devops-ui/Icon";
 import { Duration } from "azure-devops-ui/Duration";
 import { ConditionalChildren } from "azure-devops-ui/ConditionalChildren";
 import { ReleaseApproval } from "azure-devops-extension-api/Release";
-import { ReleaseApprovalRow } from "./releaseapprovalgrid.component";
+import {
+  ReleaseApprovalRow,
+  ReleaseApprovalEx,
+} from "./releaseapprovalgrid.component";
 
 export function renderGridApproverInfoCell(
   rowIndex: number,
@@ -14,7 +17,7 @@ export function renderGridApproverInfoCell(
   tableColumn: ITableColumn<ReleaseApprovalRow>,
   tableItem: ReleaseApprovalRow
 ): JSX.Element {
-  const approval: ReleaseApproval = tableItem;
+  const approval: ReleaseApprovalEx = tableItem.underlyingItem.data;
   return (
     <GridApproverInfoCell
       key={`col-approver-${columnIndex}-${rowIndex}`}

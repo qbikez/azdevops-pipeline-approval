@@ -10,7 +10,10 @@ import {
 } from "azure-devops-extension-api/Release";
 import { PillGroup } from "azure-devops-ui/PillGroup";
 import { Link } from "azure-devops-ui/Link";
-import { ReleaseApprovalRow } from "./releaseapprovalgrid.component";
+import {
+  ReleaseApprovalRow,
+  ReleaseApprovalEx,
+} from "./releaseapprovalgrid.component";
 
 export function renderGridReleaseInfoCell(
   rowIndex: number,
@@ -18,7 +21,7 @@ export function renderGridReleaseInfoCell(
   tableColumn: ITableColumn<ReleaseApprovalRow>,
   tableItem: ReleaseApprovalRow
 ): JSX.Element {
-  const approval: ReleaseApproval = tableItem;
+  const approval: ReleaseApprovalEx = tableItem.underlyingItem.data;
   return (
     <GridReleaseInfoCell
       key={`col-release-${columnIndex}-${rowIndex}`}
