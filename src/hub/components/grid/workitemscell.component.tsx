@@ -154,8 +154,6 @@ const renderTaskRow = (
             {state}
           </PillGroup>
         </span>
-
-        {console.dir(item)}
       </div>
     </ListItem>
   );

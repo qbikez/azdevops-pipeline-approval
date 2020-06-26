@@ -197,7 +197,7 @@ export default class ReleaseApprovalGrid extends React.Component {
 
     await Promise.all(
       approvals.map(async (a) => {
-        const info = await this._releaseService.getReleaseDetails(a.release.id);
+        const info = await this._releaseService.getReleaseInfo(a.release.id);
         a.info = info;
       })
     );

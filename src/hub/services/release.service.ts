@@ -26,58 +26,82 @@ import { SDK, getClient } from "../mocks/sdkMock";
 import { ResourceRef } from "azure-devops-extension-api/WebApi";
 
 export interface ReleaseInfo {
+  release?: Release;
+  nextReleases?: Release[];
+
   build?: Build;
   buildWorkItems?: WorkItem[];
-  prWorkItems?: WorkItem[];
+
   pr?: GitPullRequest;
+  prWorkItems?: WorkItem[];
   prId?: number;
   prName?: string;
 }
 
 export class ReleaseService {
-  async getReleaseDetails(releaseId: number): Promise<ReleaseInfo> {
-    let releaseInfo: ReleaseInfo = {};
+  async getReleaseInfo(releaseId: number): Promise<ReleaseInfo> {
     try {
       const organization = SDK.getHost().name;
       const projectService = await SDK.getService<IProjectPageService>(
         CommonServiceIds.ProjectPageService
       );
       const project = await projectService.getProject();
-      if (!project) return releaseInfo;
+      if (!project) return {};
 
       const release = await this.getRelease(project, releaseId);
-      const build = await this.getBuild(project, release);
+      const nextReleases = await this.getReleasesAfter(project, release);
 
-      if (!build) return releaseInfo;
+      const releaseInfo = await this.getSingleReleaseDetails(
+        organization,
+        project,
+        release
+      );
+      releaseInfo.nextReleases = nextReleases;
+      return releaseInfo;
+    } catch (err) {
+      console.error(err);
+      return {};
+    }
+  }
 
-      releaseInfo.build = build;
+  private async getSingleReleaseDetails(
+    organization: string,
+    project: IProjectInfo,
+    release: Release
+  ) {
+    let releaseInfo: ReleaseInfo = {
+      release,
+    };
+    const build = await this.getBuild(project, release);
 
-      const workItemRefs = await this.getBuildWorkItems(project, build);
-      const workItems = await this.getWorkItems(
-        workItemRefs,
+    if (!build) return releaseInfo;
+
+    releaseInfo.build = build;
+
+    const workItemRefs = await this.getBuildWorkItems(project, build);
+    const workItems = await this.getWorkItems(
+      workItemRefs,
+      organization,
+      project
+    );
+
+    releaseInfo.buildWorkItems = workItems;
+
+    const { pr, name: prName } = await this.getPr(project, build);
+
+    if (pr) {
+      releaseInfo.pr = pr;
+      releaseInfo.prId = pr?.pullRequestId;
+      releaseInfo.prName = prName;
+
+      const prWorkItems = await this.getWorkItems(
+        pr.workItemRefs,
         organization,
         project
       );
-
-      releaseInfo.buildWorkItems = workItems;
-
-      const { pr, name: prName } = await this.getPr(project, build);
-
-      if (pr) {
-        releaseInfo.pr = pr;
-        releaseInfo.prId = pr?.pullRequestId;
-        releaseInfo.prName = prName;
-
-        const prWorkItems = await this.getWorkItems(
-          pr.workItemRefs,
-          organization,
-          project
-        );
-        releaseInfo.prWorkItems = prWorkItems;
-      }
-    } catch (err) {
-      console.error(err);
+      releaseInfo.prWorkItems = prWorkItems;
     }
+
     return releaseInfo;
   }
 
@@ -95,6 +119,7 @@ export class ReleaseService {
     organization: string,
     project: IProjectInfo
   ) {
+    if (!workItemRefs || !workItemRefs.length) return [];
     const workClient = getClient(WorkItemTrackingRestClient);
 
     const workItems = (
@@ -131,7 +156,6 @@ export class ReleaseService {
       true
     );
     (pr as any).webUrl = `${pr.repository.webUrl}/pullrequest/${pr.pullRequestId}`;
-    console.dir(pr);
     return { pr, name };
   }
 
@@ -155,6 +179,21 @@ export class ReleaseService {
     const client: ReleaseRestClient = getClient(ReleaseRestClient);
     const release = await client.getRelease(project.name, releaseId);
     return release;
+  }
+
+  private async getReleasesAfter(project: IProjectInfo, release: Release) {
+    const client: ReleaseRestClient = getClient(ReleaseRestClient);
+    const releases = await client.getReleases(
+      project.name,
+      release.releaseDefinition.id,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      release.createdOn
+    );
+    return releases;
   }
 
   async getLinks(releaseApproval: ReleaseApproval): Promise<void> {
