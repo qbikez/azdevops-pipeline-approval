@@ -6,19 +6,12 @@ import { Icon } from "azure-devops-ui/Icon";
 import { ReleaseApprovalRow } from "./releaseapprovalgrid.component";
 
 export function renderLastRunColumn(
-  //   rowIndex: number,
-  //   columnIndex: number,
-  //   tableColumn: ITableColum`n<IPipelineItem>,
-  //   tableItem: IPipelineItem
-  rowIndex: number,
+  _rowIndex: number,
   columnIndex: number,
   tableColumn: ITableColumn<ReleaseApprovalRow>,
   tableItem: ReleaseApprovalRow
 ): JSX.Element {
-  const { prId, releaseType } = {
-    releaseType: ReleaseType.prAutomated,
-    ...tableItem,
-  };
+  const prId = tableItem.pr?.pullRequestId;
   const prName = tableItem.pr?.title || tableItem.prName;
   const branchName = tableItem.build?.sourceBranch;
   const text = "#" + prId + " \u00b7 " + prName;
@@ -37,7 +30,7 @@ export function renderLastRunColumn(
             <Link
               className="fontSizeM font-size-m text-ellipsis bolt-table-link bolt-table-inline-link"
               excludeTabStop
-              href="#pr"
+              href={(tableItem.pr as any)?.webUrl}
             >
               {text}
             </Link>
@@ -47,7 +40,7 @@ export function renderLastRunColumn(
       line2={
         <Tooltip text={tooltip} overflowOnly>
           <span className="fontSize font-size secondary-text flex-row flex-center text-ellipsis">
-            {ReleaseTypeIcon({ releaseType: releaseType })}
+            {ReleaseTypeIcon({ releaseType: ReleaseType.prAutomated })}
             <span className="text-ellipsis" key="release-type-text">
               {prId}
             </span>

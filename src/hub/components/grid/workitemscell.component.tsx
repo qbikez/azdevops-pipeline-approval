@@ -18,25 +18,11 @@ import { ArrayItemProvider } from "azure-devops-ui/Utilities/Provider";
 import { WorkItem } from "azure-devops-extension-api/WorkItemTracking";
 
 export function renderWorkItemsColumn(
-  //   rowIndex: number,
-  //   columnIndex: number,
-  //   tableColumn: ITableColum`n<IPipelineItem>,
-  //   tableItem: IPipelineItem
-  rowIndex: number,
+  _rowIndex: number,
   columnIndex: number,
   tableColumn: ITableColumn<ReleaseApprovalRow>,
   tableItem: ReleaseApprovalRow
 ): JSX.Element {
-  const { prId, releaseType } = {
-    releaseType: ReleaseType.prAutomated,
-    ...tableItem,
-  };
-  const prName = tableItem.pr?.title || tableItem.prName;
-  const branchName = tableItem.build?.sourceBranch;
-  const text = "#" + prId + " \u00b7 " + prName;
-  const tooltip = "";
-  // const releaseTypeText = ReleaseTypeText({ releaseType: releaseType });
-  // const tooltip = `${releaseTypeText} from ${branchName} branch`;
   return (
     <SimpleTableCell
       className="bolt-table-cell-content-with-inline-link no-v-padding"
@@ -45,7 +31,7 @@ export function renderWorkItemsColumn(
       tableColumn={tableColumn}
     >
       <List
-        itemProvider={new ArrayItemProvider(tableItem.workItems || [])}
+        itemProvider={new ArrayItemProvider(tableItem.prWorkItems || [])}
         renderRow={renderTaskRow}
       />
     </SimpleTableCell>

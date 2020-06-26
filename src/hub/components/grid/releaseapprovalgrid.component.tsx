@@ -36,10 +36,10 @@ import { renderWorkItemsColumn } from "./workitemscell.component";
 
 export type ReleaseApprovalRow = ReleaseApproval & {
   build?: Build;
-  gitCommit?: GitCommit;
-  workItems?: WorkItem[];
+  buildWorkItems?: WorkItem[];
+  prWorkItems?: WorkItem[];
   pr?: GitPullRequest;
-  prId?: string;
+  prId?: number;
   prName?: string;
 };
 
@@ -195,7 +195,7 @@ export default class ReleaseApprovalGrid extends React.Component {
 
     await Promise.all(
       approvals.map(async (a) => {
-        await this._releaseService.getWorkItems(a);
+        await this._releaseService.fillWorkItems(a);
       })
     );
     this._hasMoreItems.value = this._pageLength == approvals.length;
