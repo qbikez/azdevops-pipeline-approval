@@ -175,7 +175,7 @@ export default class ReleaseApprovalGrid extends React.Component {
                 //   treeItem.underlyingItem.childItems?.push(
                 //     this.getRowShimmer(1)[0]
                 //   );
-                //   //this._treeItemProvider.toggle(treeItem.underlyingItem);
+                this._treeItemProvider.toggle(treeItem);
               }}
               scrollable={true}
             />
@@ -220,11 +220,8 @@ export default class ReleaseApprovalGrid extends React.Component {
       })
     );
     this._hasMoreItems.value = this._pageLength == approvals.length;
-    const shimmer = this._treeItemProvider.value[
-      this._treeItemProvider.length - 1
-    ];
-
-    //this._treeItemProvider.remove(shimmer.underlyingItem);
+    // remove shimmer
+    this._treeItemProvider.pop();
 
     const notInTable = approvals.filter((a) =>
       this._treeItemProvider.value.every(
@@ -234,26 +231,31 @@ export default class ReleaseApprovalGrid extends React.Component {
     const rows = await Promise.all(
       notInTable.map(async (a) => {
         const row = toTreeItem(a);
-        if (a.info?.nextReleases) row.childItems = [];
-
-        // const nextRows =
-        //   a.info?.nextReleases?.map(async (next) => {
-        //     const info = await this._releaseService.getReleaseInfo(next.id);
-        //     const child: ReleaseApprovalEx = {
-        //       ...a,
-        //       info,
-        //     } as ReleaseApprovalEx;
-        //     const childRow = toTreeItem(child);
-        //     row.childItems?.push(childRow);
-        //     return childRow;
-        //   }) || [];
-
-        //= await Promise.all(nextRows);
-        //row.expanded = true;
+        if (a.info?.nextReleases)
+          row.childItems = this.getRowShimmer(a.info?.nextReleases.length);
         return row;
       })
     );
-    rows.forEach((r) => this._treeItemProvider.add(r));
+    const treeNodes = rows.map((r) => this._treeItemProvider.add(r));
+
+    treeNodes.forEach(async (n) => {
+      const a = n.underlyingItem.data;
+      const nextRows =
+        a.info?.nextReleases?.map(async (next) => {
+          const info = await this._releaseService.getReleaseInfo(next.id);
+          const child: ReleaseData = {
+            ...a,
+            info,
+          } as ReleaseData;
+          const childRow = toTreeItem(child);
+          n.underlyingItem.childItems?.push(childRow);
+          return childRow;
+        }) || [];
+      const children = await Promise.all(nextRows);
+      n.underlyingItem.childItems = children;
+      console.log("refresh");
+      this._treeItemProvider.refresh(n);
+    });
   };
 
   private getRowShimmer(length: number): any[] {
@@ -344,10 +346,76 @@ function toTreeItem(release: ReleaseData): ITreeItem<ReleaseData> {
 }
 
 class ItemProvider extends ObservableArray<ReleaseRow> {
-  public add(item: ITreeItem<ReleaseData>) {
-    this.push({
-      underlyingItem: item,
-      depth: 0,
-    });
+  public refresh(n: ReleaseRow) {
+    if (n.underlyingItem.expanded) {
+      this.toggle(n);
+      this.toggle(n);
+    }
   }
+
+  public toggle(treeItem: ReleaseRow) {
+    var itemIndex = this.value.indexOf(treeItem);
+    if (itemIndex >= 0) {
+      const item = treeItem.underlyingItem;
+      if (item.childItems === undefined) {
+        console.log("no children to toggle");
+        return;
+      }
+      const collapse = !!item.expanded;
+      item.expanded = !collapse;
+
+      if (collapse) {
+        const visibleChildren = this.getChildRows(treeItem);
+        this.splice(itemIndex + 1, visibleChildren.length || 0);
+      } else {
+        this.splice(
+          itemIndex + 1,
+          0,
+          ...(item.childItems?.map((c) => this.toRow(c, 1, treeItem)) || [])
+        );
+      }
+    }
+  }
+
+  public add(item: ITreeItem<ReleaseData>) {
+    const treeNode = this.toRow(item, 0);
+    this.push(treeNode);
+    return treeNode;
+  }
+
+  private toRow(
+    underlyingItem: ITreeItem<ReleaseData>,
+    depth: number,
+    parentItem?: ReleaseRow
+  ): ReleaseRow {
+    return {
+      underlyingItem,
+      depth,
+      parentItem,
+    };
+  }
+
+  private getRows(items: ITreeItem<ReleaseData>[]) {
+    return this.value.filter((v) =>
+      items.find((i) => i.data === v.underlyingItem.data)
+    );
+  }
+
+  private getChildRows(parent: ITreeItemEx<ReleaseData>) {
+    return this.value.filter((v) => v.parentItem === parent);
+  }
+
+  // private indexOf(treeItem: ReleaseRow, fromIndex?: number) {
+  //   if (!fromIndex) {
+  //     fromIndex = 0;
+  //   }
+  //   super.value
+  //   // @TODO: Can we come up with a faster method than this.
+  //   for (var index = fromIndex; index < this.length; index++) {
+  //     if (treeItem === this.value[index]) {
+  //       return index;
+  //     }
+  //   }
+  //   return -1;
+  // }
 }
