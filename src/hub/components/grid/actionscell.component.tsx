@@ -7,25 +7,22 @@ import {
   EventType,
 } from "@src-root/hub/model/ReleaseApprovalEvents";
 import { ReleaseApproval } from "azure-devops-extension-api/Release";
-import {
-  ReleaseApprovalRow,
-  ReleaseApprovalEx,
-} from "./releaseapprovalgrid.component";
+import { ReleaseRow, ReleaseData } from "./releaseapprovalgrid.component";
 
 export function renderGridActionsCell(
   rowIndex: number,
   columnIndex: number,
-  tableColumn: ITableColumn<ReleaseApprovalRow>,
-  tableItem: ReleaseApprovalRow
+  tableColumn: ITableColumn<ReleaseRow>,
+  tableItem: ReleaseRow
 ): JSX.Element {
-  const approval: ReleaseApprovalEx = tableItem.underlyingItem.data;
+  const data: ReleaseData = tableItem.underlyingItem.data;
   return (
     <GridActionsCell
       key={`col-actions-${columnIndex}-${rowIndex}`}
       rowIndex={rowIndex}
       columnIndex={columnIndex}
       tableColumn={tableColumn}
-      releaseApproval={approval}
+      releaseApproval={data.approval}
     />
   );
 }
@@ -34,7 +31,7 @@ export interface IGridActionsCellProps {
   releaseApproval: ReleaseApproval;
   rowIndex: number;
   columnIndex: number;
-  tableColumn: ITableColumn<ReleaseApprovalRow>;
+  tableColumn: ITableColumn<ReleaseRow>;
 }
 
 export default class GridActionsCell extends React.Component<

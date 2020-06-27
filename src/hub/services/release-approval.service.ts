@@ -9,12 +9,13 @@ import {
   IProjectPageService,
   CommonServiceIds,
 } from "azure-devops-extension-api";
+import { ReleaseData } from "../components/grid/releaseapprovalgrid.component";
 
 export class ReleaseApprovalService {
   async findApprovals(
     top: number = 50,
     continuationToken: number = 0
-  ): Promise<ReleaseApproval[]> {
+  ): Promise<ReleaseData[]> {
     const projectService = await SDK.getService<IProjectPageService>(
       CommonServiceIds.ProjectPageService
     );
@@ -33,7 +34,10 @@ export class ReleaseApprovalService {
       undefined,
       true
     );
-    return approvals;
+    return approvals.map((a) => ({
+      id: a.id,
+      approval: a,
+    }));
   }
 
   private async scheduleDeployment(

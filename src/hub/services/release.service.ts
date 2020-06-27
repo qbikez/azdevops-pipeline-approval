@@ -24,6 +24,7 @@ import {
 } from "azure-devops-extension-api";
 import { SDK, getClient } from "../mocks/sdkMock";
 import { ResourceRef } from "azure-devops-extension-api/WebApi";
+import { ReleaseData } from "../components/grid/releaseapprovalgrid.component";
 
 export interface ReleaseInfo {
   release?: Release;
@@ -201,7 +202,8 @@ export class ReleaseService {
     return releases;
   }
 
-  async getLinks(releaseApproval: ReleaseApproval): Promise<void> {
+  async getLinks(releaseData: ReleaseData): Promise<void> {
+    const releaseApproval = releaseData.approval;
     const projectService = await SDK.getService<IProjectPageService>(
       CommonServiceIds.ProjectPageService
     );

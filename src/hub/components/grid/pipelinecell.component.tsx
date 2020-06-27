@@ -7,26 +7,24 @@ import {
 import { Status, Statuses, StatusSize } from "azure-devops-ui/Status";
 import { Tooltip } from "azure-devops-ui/TooltipEx";
 import { Link } from "azure-devops-ui/Link";
-import {
-  ReleaseApprovalRow,
-  ReleaseApprovalEx,
-} from "./releaseapprovalgrid.component";
+import { ReleaseRow, ReleaseData } from "./releaseapprovalgrid.component";
 import { ExpandableTreeCell } from "azure-devops-ui/TreeEx";
 
 export function renderGridPipelineCell(
   rowIndex: number,
   columnIndex: number,
-  _tableColumn: ITableColumn<ReleaseApprovalRow>,
-  tableItem: ReleaseApprovalRow
+  _tableColumn: ITableColumn<ReleaseRow>,
+  tableItem: ReleaseRow
 ): JSX.Element {
-  const approval: ReleaseApprovalEx = tableItem.underlyingItem.data;
+  const data = tableItem.underlyingItem.data;
+  const approval = data.approval;
   const releaseDefinition = approval.releaseDefinition;
   const releaseDefinitionName = releaseDefinition.name;
   const link =
     releaseDefinition._links && releaseDefinition._links.web
       ? releaseDefinition._links.web.href
       : "";
-  const behind = approval.info?.nextReleases?.length;
+  const behind = data.info?.nextReleases?.length;
 
   return (
     <ExpandableTreeCell
