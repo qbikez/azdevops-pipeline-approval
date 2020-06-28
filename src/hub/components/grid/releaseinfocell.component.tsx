@@ -31,15 +31,8 @@ export function renderGridReleaseInfoCell(
   const releaseLink =
     release._links && release._links.web ? release._links.web.href : "";
 
-  const environment =
-    approval?.releaseEnvironment ||
-    data.info?.release?.environments.find(
-      (e) => e.name === data.parent?.approval?.releaseEnvironment?.name
-    );
-
-  const link =
-    (environment as ReleaseEnvironmentShallowReference)?._links?.web?.href ||
-    "";
+  const environment = data.releaseEnvironment;
+  const link = environment?._links?.web?.href || "";
 
   const approvalType = approval?.approvalType;
 

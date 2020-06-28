@@ -39,6 +39,7 @@ export class ReleaseApprovalService {
       release: a.release,
       id: a.id,
       approval: a,
+      releaseEnvironment: a.releaseEnvironment,
     }));
   }
 

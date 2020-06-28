@@ -17,7 +17,10 @@ import {
   IItemProvider,
 } from "azure-devops-ui/Utilities/Provider";
 import { ISelectionRange } from "azure-devops-ui/Utilities/Selection";
-import { ReleaseApprovalAction } from "@src-root/hub/model/ReleaseApprovalAction";
+import {
+  ReleaseApprovalAction,
+  ActionType,
+} from "@src-root/hub/model/ReleaseApprovalAction";
 import {
   ReleaseApprovalEvents,
   EventType,
@@ -33,6 +36,7 @@ import {
   ReleaseShallowReference,
   ReleaseDefinition,
   ReleaseDefinitionShallowReference,
+  ReleaseEnvironmentShallowReference,
 } from "azure-devops-extension-api/Release";
 import { Button } from "azure-devops-ui/Button";
 import { ConditionalChildren } from "azure-devops-ui/ConditionalChildren";
@@ -54,9 +58,11 @@ export type ReleaseData = {
   id: number;
   release: ReleaseShallowReference;
   releaseDefinition: ReleaseDefinitionShallowReference;
+  releaseEnvironment: ReleaseEnvironmentShallowReference;
   approval?: ReleaseApproval;
   info?: ReleaseInfo;
   parent?: ReleaseData;
+  children?: ReleaseData[];
 };
 
 export type ReleaseRow = ITreeItemEx<ReleaseData>;
@@ -74,9 +80,10 @@ export default class ReleaseApprovalGrid extends React.Component {
     multiSelect: true,
   });
   private _selectedReleases: ArrayItemProvider<
-    ReleaseApproval
-  > = new ArrayItemProvider<ReleaseApproval>([]);
+    ReleaseData
+  > = new ArrayItemProvider<ReleaseData>([]);
   private _approvalForm: React.RefObject<ReleaseApprovalForm>;
+
   private get dialog() {
     return this._approvalForm.current as ReleaseApprovalForm;
   }
@@ -134,14 +141,21 @@ export default class ReleaseApprovalGrid extends React.Component {
       await this.refreshGrid();
     });
     ReleaseApprovalEvents.subscribe(EventType.ClearGridSelection, () => {
-      this._selectedReleases = new ArrayItemProvider<ReleaseApproval>([]);
+      this._selectedReleases = new ArrayItemProvider<ReleaseData>([]);
     });
     ReleaseApprovalEvents.subscribe(EventType.ApproveAllReleases, async () => {
       await this.approveAll();
     });
     ReleaseApprovalEvents.subscribe(
+      EventType.ForceRelease,
+      async (data: ReleaseData) => {
+        await this.forceRelease(data);
+      }
+    );
+
+    ReleaseApprovalEvents.subscribe(
       EventType.ApproveSingleRelease,
-      (approval: ReleaseApproval) => {
+      (approval: ReleaseData) => {
         this.approveSingle(approval);
       }
     );
@@ -150,7 +164,7 @@ export default class ReleaseApprovalGrid extends React.Component {
     });
     ReleaseApprovalEvents.subscribe(
       EventType.RejectSingleRelease,
-      (approval: ReleaseApproval) => {
+      (approval: ReleaseData) => {
         this.rejectSingle(approval);
       }
     );
@@ -191,7 +205,11 @@ export default class ReleaseApprovalGrid extends React.Component {
               <Button onClick={this.loadData} text="Load more..." />
             </div>
           </ConditionalChildren>
-          <ReleaseApprovalForm ref={this._approvalForm} action={this._action} />
+          <ReleaseApprovalForm
+            ref={this._approvalForm}
+            action={this._action}
+            onConfirm={this.confirmAction}
+          />
         </div>
       </div>
     );
@@ -249,12 +267,18 @@ export default class ReleaseApprovalGrid extends React.Component {
       const nextRows =
         a.info?.nextReleases?.map(async (next) => {
           const info = await this._releaseService.getReleaseInfo(next.id);
+          const environment =
+            a.releaseEnvironment ||
+            info.release?.environments.find(
+              (e) => e.name === a.releaseEnvironment?.name
+            );
           const child: ReleaseData = {
             id: a.id,
             info,
             release: info.release!,
             releaseDefinition: info.release!.releaseDefinition,
             parent: n.underlyingItem.data,
+            releaseEnvironment: environment,
           };
           const childRow = toTreeItem(child);
           n.underlyingItem.childItems?.push(childRow);
@@ -262,6 +286,7 @@ export default class ReleaseApprovalGrid extends React.Component {
         }) || [];
       const children = await Promise.all(nextRows);
       n.underlyingItem.childItems = children;
+      n.underlyingItem.data.children = children.map((c) => c.data);
       this._treeItemProvider.refresh(n);
     });
   };
@@ -277,8 +302,9 @@ export default class ReleaseApprovalGrid extends React.Component {
     await this.loadData();
   }
 
-  private approveSingle(approval: ReleaseApproval): void {
-    this._selectedReleases = new ArrayItemProvider<ReleaseApproval>([approval]);
+  private approveSingle(approval: ReleaseData): void {
+    console.log(`approve single ${approval}`);
+    this._selectedReleases = new ArrayItemProvider<ReleaseData>([approval]);
     this.approve();
   }
 
@@ -298,8 +324,8 @@ export default class ReleaseApprovalGrid extends React.Component {
     this.dialog.openDialog(this._selectedReleases);
   }
 
-  private rejectSingle(approval: ReleaseApproval): void {
-    this._selectedReleases = new ArrayItemProvider<ReleaseApproval>([approval]);
+  private rejectSingle(approval: ReleaseData): void {
+    this._selectedReleases = new ArrayItemProvider<ReleaseData>([approval]);
     this.reject();
   }
 
@@ -319,9 +345,62 @@ export default class ReleaseApprovalGrid extends React.Component {
     this.dialog.openDialog(this._selectedReleases);
   }
 
+  private forceRelease(data: ReleaseData) {
+    if (!data.info?.release) throw "missing release info";
+    if (!data.parent) throw "missing parent approval";
+    if (!data.parent.children) throw "missing siblings";
+
+    const childIndex = data.parent.children.indexOf(data);
+    console.log(`index:${childIndex}`);
+    const toCancel = data.parent.children.slice(childIndex + 1);
+
+    this._action.value = ReleaseApprovalAction.ForceRelease;
+    this._selectedReleases = new ArrayItemProvider<ReleaseData>([data]);
+    this.dialog.openDialog(
+      this._selectedReleases,
+      new ArrayItemProvider<ReleaseData>(toCancel)
+    );
+  }
+
+  private async confirmAction(
+    releases: ReleaseData[],
+    toCancel: ReleaseData[],
+    action: ReleaseApprovalAction,
+    comment: string,
+    deferredDate: Date | null
+  ) {
+    switch (action.type) {
+      case ActionType.Approve:
+        await this._approvalsService.approveAll(
+          releases.map((r) => r.approval!),
+          comment,
+          deferredDate
+        );
+        break;
+      case ActionType.Reject:
+        await this._approvalsService.rejectAll(
+          releases.map((r) => r.approval!),
+          comment
+        );
+      case ActionType.ForceRelease:
+      // cancel all previous releases (for selected env)
+      // wait until selected release has pending approval
+      // confirm the pending approval
+      // await this._approvalsService.cancelAll(
+      //   toCancel),
+      //   comment
+      // );
+      // await this._approvalsService.approveAll(
+      //   releases.map((r) => r.approval!),
+      //   comment,
+      //   deferredDate
+      // );
+    }
+  }
+
   private getSelectedReleases(): void {
-    this._selectedReleases = new ArrayItemProvider<ReleaseApproval>([]);
-    let releases: Array<ReleaseApproval> = new Array<ReleaseApproval>();
+    this._selectedReleases = new ArrayItemProvider<ReleaseData>([]);
+    let releases: Array<ReleaseData> = new Array<ReleaseData>();
     this._selection.value.forEach((range: ISelectionRange) => {
       for (
         let index: number = range.beginIndex;
@@ -334,7 +413,7 @@ export default class ReleaseApprovalGrid extends React.Component {
         }
       }
     });
-    this._selectedReleases = new ArrayItemProvider<ReleaseApproval>(releases);
+    this._selectedReleases = new ArrayItemProvider<ReleaseData>(releases);
   }
 
   private async showErrorMessage(message: string): Promise<void> {

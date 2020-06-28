@@ -23,7 +23,19 @@ export function renderGridActionsCell(
         key={`col-actions-${columnIndex}-${rowIndex}`}
         columnIndex={columnIndex}
         tableColumn={tableColumn}
-      ></SimpleTableCell>
+      >
+        <ButtonGroup>
+          <Button
+            key={"btn-force-deploy-" + data.release.id}
+            tooltipProps={{ text: "Approve" }}
+            primary={true}
+            iconProps={{ iconName: "" }}
+            onClick={() =>
+              ReleaseApprovalEvents.fire(EventType.ForceRelease, data)
+            }
+          />
+        </ButtonGroup>
+      </SimpleTableCell>
     );
   }
   return (
@@ -39,7 +51,7 @@ export function renderGridActionsCell(
           primary={true}
           iconProps={{ iconName: "CheckMark" }}
           onClick={() =>
-            ReleaseApprovalEvents.fire(EventType.ApproveSingleRelease, approval)
+            ReleaseApprovalEvents.fire(EventType.ApproveSingleRelease, data)
           }
         />
         <Button
@@ -48,7 +60,7 @@ export function renderGridActionsCell(
           danger={true}
           iconProps={{ iconName: "Cancel" }}
           onClick={() =>
-            ReleaseApprovalEvents.fire(EventType.RejectSingleRelease, approval)
+            ReleaseApprovalEvents.fire(EventType.RejectSingleRelease, data)
           }
         />
       </ButtonGroup>
