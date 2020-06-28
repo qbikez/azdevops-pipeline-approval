@@ -50,7 +50,8 @@ export class ReleaseService {
         CommonServiceIds.ProjectPageService
       );
       const project = await projectService.getProject();
-      if (!project) return {};
+      if (!project)
+        throw new Error("failed to retrieve project for current page");
 
       const release = await this.getRelease(project, releaseId);
       const nextReleases = includeNextReleases
@@ -184,6 +185,7 @@ export class ReleaseService {
   private async getRelease(project: IProjectInfo, releaseId: number) {
     const client: ReleaseRestClient = getClient(ReleaseRestClient);
     const release = await client.getRelease(project.name, releaseId);
+
     return release;
   }
 
@@ -211,6 +213,8 @@ export class ReleaseService {
     if (!project) return;
 
     const client: ReleaseRestClient = getClient(ReleaseRestClient);
+
+    if (!releaseApproval) return;
 
     const deployments = await client.getDeployments(
       project.name,

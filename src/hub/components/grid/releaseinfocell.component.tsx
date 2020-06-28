@@ -1,5 +1,9 @@
 import * as React from "react";
-import { TwoLineTableCell, ITableColumn } from "azure-devops-ui/Table";
+import {
+  TwoLineTableCell,
+  ITableColumn,
+  SimpleTableCell,
+} from "azure-devops-ui/Table";
 import { Tooltip } from "azure-devops-ui/TooltipEx";
 import { Icon } from "azure-devops-ui/Icon";
 import { Pill, PillSize, PillVariant } from "azure-devops-ui/Pill";
@@ -7,6 +11,7 @@ import { Colors } from "@src-root/hub/model/Colors";
 import {
   ReleaseApproval,
   ApprovalType,
+  ReleaseEnvironmentShallowReference,
 } from "azure-devops-extension-api/Release";
 import { PillGroup } from "azure-devops-ui/PillGroup";
 import { Link } from "azure-devops-ui/Link";
@@ -19,76 +24,56 @@ export function renderGridReleaseInfoCell(
   tableItem: ReleaseRow
 ): JSX.Element {
   const data: ReleaseData = tableItem.underlyingItem.data;
-  return (
-    <GridReleaseInfoCell
-      key={`col-release-${columnIndex}-${rowIndex}`}
-      rowIndex={rowIndex}
-      columnIndex={columnIndex}
-      tableColumn={tableColumn}
-      releaseApproval={data.approval}
-    />
-  );
-}
 
-export interface IGridReleaseInfoCellProps {
-  releaseApproval: ReleaseApproval;
-  rowIndex: number;
-  columnIndex: number;
-  tableColumn: ITableColumn<ReleaseRow>;
-}
+  const approval = data.approval;
+  const release = data.release;
+  const releaseName = release.name;
+  const releaseLink =
+    release._links && release._links.web ? release._links.web.href : "";
 
-export default class GridReleaseInfoCell extends React.Component<
-  IGridReleaseInfoCellProps
-> {
-  constructor(props: IGridReleaseInfoCellProps) {
-    super(props);
+  const environment =
+    approval?.releaseEnvironment ||
+    data.info?.release?.environments.find(
+      (e) => e.name === data.parent?.approval?.releaseEnvironment?.name
+    );
+
+  const link =
+    (environment as ReleaseEnvironmentShallowReference)?._links?.web?.href ||
+    "";
+
+  const approvalType = approval?.approvalType;
+
+  let approvalTypeLabel: string = "";
+  switch (approvalType) {
+    case ApprovalType.PreDeploy:
+      approvalTypeLabel = "Pre-Deployment";
+      break;
+    case ApprovalType.PostDeploy:
+      approvalTypeLabel = "Post-Deployment";
+      break;
   }
 
-  render(): JSX.Element {
-    const release = this.props.releaseApproval.release;
-    const releaseName = release.name;
-    const releaseLink =
-      release._links && release._links.web ? release._links.web.href : "";
-
-    const releaseEnvironment = this.props.releaseApproval.releaseEnvironment;
-    const releaseEnvironmentName = releaseEnvironment.name;
-    const releaseEnvironmentLink =
-      releaseEnvironment._links && releaseEnvironment._links.web
-        ? releaseEnvironment._links.web.href
-        : "";
-
-    const approvalType = this.props.releaseApproval.approvalType;
-
-    let approvalTypeLabel: string = "";
-    switch (approvalType) {
-      case ApprovalType.PreDeploy:
-        approvalTypeLabel = "Pre-Deployment";
-        break;
-      case ApprovalType.PostDeploy:
-        approvalTypeLabel = "Post-Deployment";
-        break;
-    }
-
-    return (
-      <TwoLineTableCell
-        columnIndex={this.props.columnIndex}
-        tableColumn={this.props.tableColumn}
-        key={`col-release-${this.props.columnIndex}-${this.props.rowIndex}`}
-        className="bolt-table-cell-content-with-inline-link no-v-padding"
-        line1={
-          <span className="flex-row scroll-hidden">
-            <Tooltip text={releaseName} overflowOnly>
-              <span className="fontSize font-size secondary-text flex-row flex-center text-ellipsis">
-                <Link href={releaseLink} target="_blank">
-                  <Icon iconName="ProductRelease" />
-                  {releaseName}
-                </Link>
-              </span>
-            </Tooltip>
-          </span>
-        }
-        line2={
-          <Tooltip text={releaseEnvironmentName} overflowOnly>
+  return (
+    <TwoLineTableCell
+      columnIndex={columnIndex}
+      tableColumn={tableColumn}
+      key={`col-release-${columnIndex}-${rowIndex}`}
+      className="bolt-table-cell-content-with-inline-link no-v-padding"
+      line1={
+        <span className="flex-row scroll-hidden">
+          <Tooltip text={releaseName} overflowOnly>
+            <span className="fontSize font-size secondary-text flex-row flex-center text-ellipsis">
+              <Link href={releaseLink} target="_blank">
+                <Icon iconName="ProductRelease" />
+                {releaseName}
+              </Link>
+            </span>
+          </Tooltip>
+        </span>
+      }
+      line2={
+        environment ? (
+          <Tooltip text={environment?.name} overflowOnly>
             <span className="fontSize font-size secondary-text flex-row flex-center text-ellipsis">
               <PillGroup className="flex-row">
                 <Pill
@@ -96,22 +81,28 @@ export default class GridReleaseInfoCell extends React.Component<
                   variant={PillVariant.colored}
                   color={Colors.darkRedColor}
                   onClick={() => {
-                    if (releaseEnvironmentLink) {
-                      window.open(releaseEnvironmentLink, "_blank");
+                    if (link) {
+                      window.open(link, "_blank");
                     }
                   }}
                 >
                   <Icon iconName="ServerEnviroment" className="icon-margin" />
-                  {releaseEnvironmentName}
+                  {environment?.name}
                 </Pill>
-                <Pill size={PillSize.compact} variant={PillVariant.outlined}>
-                  {approvalTypeLabel}
-                </Pill>
+                {approvalTypeLabel ? (
+                  <Pill size={PillSize.compact} variant={PillVariant.outlined}>
+                    {approvalTypeLabel}
+                  </Pill>
+                ) : (
+                  ""
+                )}
               </PillGroup>
             </span>
           </Tooltip>
-        }
-      />
-    );
-  }
+        ) : (
+          <div></div>
+        )
+      }
+    />
+  );
 }

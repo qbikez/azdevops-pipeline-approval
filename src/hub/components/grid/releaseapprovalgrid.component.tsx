@@ -27,7 +27,13 @@ import { renderGridReleaseInfoCell } from "@src-root/hub/components/grid/release
 import { renderGridApproverInfoCell } from "@src-root/hub/components/grid/approverinfocell.component";
 import { renderGridActionsCell } from "@src-root/hub/components/grid/actionscell.component";
 import { Card } from "azure-devops-ui/Card";
-import { ReleaseApproval, Release } from "azure-devops-extension-api/Release";
+import {
+  ReleaseApproval,
+  Release,
+  ReleaseShallowReference,
+  ReleaseDefinition,
+  ReleaseDefinitionShallowReference,
+} from "azure-devops-extension-api/Release";
 import { Button } from "azure-devops-ui/Button";
 import { ConditionalChildren } from "azure-devops-ui/ConditionalChildren";
 import ReleaseApprovalForm from "@src-root/hub/components/form/form.component";
@@ -46,8 +52,11 @@ import {
 
 export type ReleaseData = {
   id: number;
-  approval: ReleaseApproval;
+  release: ReleaseShallowReference;
+  releaseDefinition: ReleaseDefinitionShallowReference;
+  approval?: ReleaseApproval;
   info?: ReleaseInfo;
+  parent?: ReleaseData;
 };
 
 export type ReleaseRow = ITreeItemEx<ReleaseData>;
@@ -56,7 +65,7 @@ export default class ReleaseApprovalGrid extends React.Component {
   private _approvalsService: ReleaseApprovalService = new ReleaseApprovalService();
   private _releaseService: ReleaseService = new ReleaseService();
   private _treeItemProvider = new ItemProvider();
-  private _pageLength: number = 20;
+  private _pageLength: number = 2;
   private _hasMoreItems: ObservableValue<boolean> = new ObservableValue<
     boolean
   >(false);
@@ -172,9 +181,6 @@ export default class ReleaseApprovalGrid extends React.Component {
               itemProvider={this._treeItemProvider}
               selection={this._selection}
               onToggle={(event, treeItem: ITreeItemEx<ReleaseData>) => {
-                //   treeItem.underlyingItem.childItems?.push(
-                //     this.getRowShimmer(1)[0]
-                //   );
                 this._treeItemProvider.toggle(treeItem);
               }}
               scrollable={true}
@@ -193,14 +199,14 @@ export default class ReleaseApprovalGrid extends React.Component {
 
   private loadData = async () => {
     let continuationToken = 0;
-    const lastIndex = this._treeItemProvider.value.length - 1;
+    const rootRows = this._treeItemProvider.value.filter((r) => r.depth === 0);
+    const lastIndex = rootRows.length - 1;
     if (lastIndex >= 0) {
-      const lastItem = this._treeItemProvider.value[lastIndex].underlyingItem
-        .data;
+      const lastItem = rootRows[lastIndex].underlyingItem.data;
       continuationToken = lastItem.id - 1;
     }
-    const rowShimmer = this.getRowShimmer(1);
-    this._treeItemProvider.add(rowShimmer[0]);
+    const rowShimmer = this.getRowShimmer()[0];
+    this._treeItemProvider.add(rowShimmer);
     const approvals: ReleaseData[] = await this._approvalsService.findApprovals(
       this._pageLength,
       continuationToken
@@ -213,7 +219,7 @@ export default class ReleaseApprovalGrid extends React.Component {
     await Promise.all(
       approvals.map(async (a) => {
         const info = await this._releaseService.getReleaseInfo(
-          a.approval.release.id,
+          a.release.id,
           true
         );
         a.info = info;
@@ -244,21 +250,23 @@ export default class ReleaseApprovalGrid extends React.Component {
         a.info?.nextReleases?.map(async (next) => {
           const info = await this._releaseService.getReleaseInfo(next.id);
           const child: ReleaseData = {
-            ...a,
+            id: a.id,
             info,
-          } as ReleaseData;
+            release: info.release!,
+            releaseDefinition: info.release!.releaseDefinition,
+            parent: n.underlyingItem.data,
+          };
           const childRow = toTreeItem(child);
           n.underlyingItem.childItems?.push(childRow);
           return childRow;
         }) || [];
       const children = await Promise.all(nextRows);
       n.underlyingItem.childItems = children;
-      console.log("refresh");
       this._treeItemProvider.refresh(n);
     });
   };
 
-  private getRowShimmer(length: number): any[] {
+  private getRowShimmer(length: number = 1): any[] {
     return new Array(length).fill(
       new ObservableValue<ReleaseApproval | undefined>(undefined)
     );
@@ -320,9 +328,10 @@ export default class ReleaseApprovalGrid extends React.Component {
         index <= range.endIndex;
         index++
       ) {
-        releases.push(
-          this._treeItemProvider.value[index].underlyingItem.data.approval
-        );
+        const data = this._treeItemProvider.value[index].underlyingItem.data;
+        if (data.approval) {
+          releases.push(data.approval);
+        }
       }
     });
     this._selectedReleases = new ArrayItemProvider<ReleaseApproval>(releases);

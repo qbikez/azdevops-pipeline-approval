@@ -16,65 +16,42 @@ export function renderGridActionsCell(
   tableItem: ReleaseRow
 ): JSX.Element {
   const data: ReleaseData = tableItem.underlyingItem.data;
-  return (
-    <GridActionsCell
-      key={`col-actions-${columnIndex}-${rowIndex}`}
-      rowIndex={rowIndex}
-      columnIndex={columnIndex}
-      tableColumn={tableColumn}
-      releaseApproval={data.approval}
-    />
-  );
-}
-
-export interface IGridActionsCellProps {
-  releaseApproval: ReleaseApproval;
-  rowIndex: number;
-  columnIndex: number;
-  tableColumn: ITableColumn<ReleaseRow>;
-}
-
-export default class GridActionsCell extends React.Component<
-  IGridActionsCellProps
-> {
-  constructor(props: IGridActionsCellProps) {
-    super(props);
-  }
-
-  render(): JSX.Element {
+  const approval = data.approval;
+  if (!approval) {
     return (
       <SimpleTableCell
-        columnIndex={this.props.columnIndex}
-        tableColumn={this.props.tableColumn}
-        key={`col-actions-${this.props.columnIndex}-${this.props.rowIndex}`}
-      >
-        <ButtonGroup>
-          <Button
-            key={"btn-approve-" + this.props.releaseApproval.id}
-            tooltipProps={{ text: "Approve" }}
-            primary={true}
-            iconProps={{ iconName: "CheckMark" }}
-            onClick={() =>
-              ReleaseApprovalEvents.fire(
-                EventType.ApproveSingleRelease,
-                this.props.releaseApproval
-              )
-            }
-          />
-          <Button
-            key={"btn-reject-" + this.props.releaseApproval.id}
-            tooltipProps={{ text: "Reject" }}
-            danger={true}
-            iconProps={{ iconName: "Cancel" }}
-            onClick={() =>
-              ReleaseApprovalEvents.fire(
-                EventType.RejectSingleRelease,
-                this.props.releaseApproval
-              )
-            }
-          />
-        </ButtonGroup>
-      </SimpleTableCell>
+        key={`col-actions-${columnIndex}-${rowIndex}`}
+        columnIndex={columnIndex}
+        tableColumn={tableColumn}
+      ></SimpleTableCell>
     );
   }
+  return (
+    <SimpleTableCell
+      columnIndex={columnIndex}
+      tableColumn={tableColumn}
+      key={`col-actions-${columnIndex}-${rowIndex}`}
+    >
+      <ButtonGroup>
+        <Button
+          key={"btn-approve-" + approval.id}
+          tooltipProps={{ text: "Approve" }}
+          primary={true}
+          iconProps={{ iconName: "CheckMark" }}
+          onClick={() =>
+            ReleaseApprovalEvents.fire(EventType.ApproveSingleRelease, approval)
+          }
+        />
+        <Button
+          key={"btn-reject-" + approval.id}
+          tooltipProps={{ text: "Reject" }}
+          danger={true}
+          iconProps={{ iconName: "Cancel" }}
+          onClick={() =>
+            ReleaseApprovalEvents.fire(EventType.RejectSingleRelease, approval)
+          }
+        />
+      </ButtonGroup>
+    </SimpleTableCell>
+  );
 }

@@ -1,5 +1,9 @@
 import * as React from "react";
-import { TwoLineTableCell, ITableColumn } from "azure-devops-ui/Table";
+import {
+  TwoLineTableCell,
+  ITableColumn,
+  SimpleTableCell,
+} from "azure-devops-ui/Table";
 import { UserService } from "@src-root/hub/services/user.service";
 import { Tooltip } from "azure-devops-ui/TooltipEx";
 import { Icon } from "azure-devops-ui/Icon";
@@ -15,6 +19,15 @@ export function renderGridApproverInfoCell(
   tableItem: ReleaseRow
 ): JSX.Element {
   const data: ReleaseData = tableItem.underlyingItem.data;
+  if (!data.approval) {
+    return (
+      <SimpleTableCell
+        key={`col-actions-${columnIndex}-${rowIndex}`}
+        columnIndex={columnIndex}
+        tableColumn={tableColumn}
+      ></SimpleTableCell>
+    );
+  }
   return (
     <GridApproverInfoCell
       key={`col-approver-${columnIndex}-${rowIndex}`}

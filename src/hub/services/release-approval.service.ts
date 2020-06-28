@@ -35,6 +35,8 @@ export class ReleaseApprovalService {
       true
     );
     return approvals.map((a) => ({
+      releaseDefinition: a.releaseDefinition,
+      release: a.release,
       id: a.id,
       approval: a,
     }));
