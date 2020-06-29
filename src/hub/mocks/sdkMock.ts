@@ -73,6 +73,7 @@ export function getClient<T>(
   if ((clientClass as unknown) === ReleaseRestClient) {
     rootPath = `https://vsrm.dev.azure.com/${config.organization}/`;
   }
+
   const defaults = {
     rootPath,
     authTokenProvider: {

@@ -11,6 +11,7 @@ import { ListSelection } from "azure-devops-ui/List";
 import {
   CommonServiceIds,
   IGlobalMessagesService,
+  IProjectInfo,
 } from "azure-devops-extension-api";
 import {
   ArrayItemProvider,
@@ -37,6 +38,7 @@ import {
   ReleaseDefinition,
   ReleaseDefinitionShallowReference,
   ReleaseEnvironmentShallowReference,
+  ProjectReference,
 } from "azure-devops-extension-api/Release";
 import { Button } from "azure-devops-ui/Button";
 import { ConditionalChildren } from "azure-devops-ui/ConditionalChildren";
@@ -55,6 +57,7 @@ import {
 } from "azure-devops-ui/Utilities/TreeItemProvider";
 
 export type ReleaseData = {
+  project: IProjectInfo;
   id: number;
   release: ReleaseShallowReference;
   releaseDefinition: ReleaseDefinitionShallowReference;
@@ -208,7 +211,7 @@ export default class ReleaseApprovalGrid extends React.Component {
           <ReleaseApprovalForm
             ref={this._approvalForm}
             action={this._action}
-            onConfirm={this.confirmAction}
+            onConfirm={(releases, toCancel, action, comment, deferredDate) => this.confirmAction(releases, toCancel, action, comment, deferredDate)}
           />
         </div>
       </div>
@@ -274,6 +277,7 @@ export default class ReleaseApprovalGrid extends React.Component {
             );
           const child: ReleaseData = {
             id: a.id,
+            project: a.project,
             info,
             release: info.release!,
             releaseDefinition: info.release!.releaseDefinition,
@@ -383,18 +387,27 @@ export default class ReleaseApprovalGrid extends React.Component {
           comment
         );
       case ActionType.ForceRelease:
-      // cancel all previous releases (for selected env)
-      // wait until selected release has pending approval
-      // confirm the pending approval
-      // await this._approvalsService.cancelAll(
-      //   toCancel),
-      //   comment
-      // );
-      // await this._approvalsService.approveAll(
-      //   releases.map((r) => r.approval!),
-      //   comment,
-      //   deferredDate
-      // );
+        // cancel all previous releases (for selected env)
+        // wait until selected release has pending approval
+        // confirm the pending approval
+        await this._approvalsService.cancelAll(
+          toCancel,
+          comment
+        );
+
+        const ids = releases.map(r => r.release.id);
+        for (let i = 10; i > 0; i--) {
+
+          const approvals = await this._approvalsService.findApprovals(undefined, undefined, ids);
+          if (approvals?.length) {
+            await this._approvalsService.approveAll(approvals.map(a => a.approval!), comment);
+            break;
+          } else {
+            if (i <= 0) { throw `timed out while waiting for new approvals of releases: ${ids}` }
+            await sleep(1000);
+          }
+        }
+        break;
     }
   }
 
@@ -409,7 +422,7 @@ export default class ReleaseApprovalGrid extends React.Component {
       ) {
         const data = this._treeItemProvider.value[index].underlyingItem.data;
         if (data.approval) {
-          releases.push(data.approval);
+          releases.push(data);
         }
       }
     });
@@ -506,4 +519,8 @@ class ItemProvider extends ObservableArray<ReleaseRow> {
   //   }
   //   return -1;
   // }
+}
+
+function sleep(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }

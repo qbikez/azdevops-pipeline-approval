@@ -4,6 +4,7 @@ import {
   ApprovalStatus,
   EnvironmentStatus,
   ReleaseApproval,
+  ReleaseStatus,
 } from "azure-devops-extension-api/Release";
 import {
   IProjectPageService,
@@ -14,7 +15,8 @@ import { ReleaseData } from "../components/grid/releaseapprovalgrid.component";
 export class ReleaseApprovalService {
   async findApprovals(
     top: number = 50,
-    continuationToken: number = 0
+    continuationToken: number = 0,
+    releaseIds?: number[]
   ): Promise<ReleaseData[]> {
     const projectService = await SDK.getService<IProjectPageService>(
       CommonServiceIds.ProjectPageService
@@ -27,7 +29,7 @@ export class ReleaseApprovalService {
       project.name,
       currentUser.id,
       undefined,
-      undefined,
+      releaseIds,
       undefined,
       top,
       continuationToken,
@@ -35,6 +37,7 @@ export class ReleaseApprovalService {
       true
     );
     return approvals.map((a) => ({
+      project,
       releaseDefinition: a.releaseDefinition,
       release: a.release,
       id: a.id,
@@ -94,6 +97,30 @@ export class ReleaseApprovalService {
         await this.approve(approval, comment, deferredDate)
     );
   }
+
+  async cancelAll(toCancel: ReleaseData[], comment: string) {
+    toCancel.forEach(async (release) => {
+      await this.cancel(release, comment);
+    });
+  }
+
+  async cancel(releaseData: ReleaseData, comment: string) {
+    const release = releaseData.info!.release!;
+    const env = release.environments.find(e => e.name === releaseData.releaseEnvironment.name);
+    if (!env) {
+      throw `no matching environment found!`;
+    }
+    let client: ReleaseRestClient = getClient(ReleaseRestClient);
+    
+    await client.updateReleaseEnvironment({
+      status: EnvironmentStatus.Canceled,
+      comment,
+      variables: {},
+      scheduledDeploymentTime: null as any
+    }, releaseData.project.name, release.id, env.id);
+    
+  }
+
 
   async approve(
     approval: ReleaseApproval,
