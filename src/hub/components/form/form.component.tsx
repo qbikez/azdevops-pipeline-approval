@@ -29,7 +29,7 @@ export interface IReleaseApprovalFormProps {
     action: ReleaseApprovalAction,
     comment: string,
     deferredDate: Date | null
-  ) => void;
+  ) => Promise<void>;
 }
 
 export default class ReleaseApprovalForm extends React.Component<
@@ -154,7 +154,7 @@ export default class ReleaseApprovalForm extends React.Component<
     }
 
     if (this.props.onConfirm) {
-      this.props.onConfirm(
+      await this.props.onConfirm(
         this._releases.value,
         this._releasesToCancel?.value || [],
         this.props.action.value,
