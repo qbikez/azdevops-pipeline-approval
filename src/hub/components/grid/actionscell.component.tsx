@@ -34,6 +34,15 @@ export function renderGridActionsCell(
               ReleaseApprovalEvents.fire(EventType.ForceRelease, data)
             }
           />
+          <Button
+            key={"btn-force-cancel-" + data.release.id}
+            tooltipProps={{ text: "Cancel" }}
+            primary={true}
+            iconProps={{ iconName: "" }}
+            onClick={() =>
+              ReleaseApprovalEvents.fire(EventType.ForceCancel, data)
+            }
+          />
         </ButtonGroup>
       </SimpleTableCell>
     );

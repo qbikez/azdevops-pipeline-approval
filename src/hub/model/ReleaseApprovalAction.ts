@@ -2,6 +2,7 @@ export declare const enum ActionType {
   Reject = 0,
   Approve = 1,
   ForceRelease = 2,
+  ForceCancel = 3,
 }
 
 export class ReleaseApprovalAction {
@@ -21,7 +22,11 @@ export class ReleaseApprovalAction {
     "forced release",
     "force release of"
   );
-
+  static ForceCancel: ReleaseApprovalAction = new ReleaseApprovalAction(
+    ActionType.ForceCancel,
+    "forced cancel",
+    "force cancel of"
+  );
   private _type: ActionType;
   private _title: string;
   private _action: string;

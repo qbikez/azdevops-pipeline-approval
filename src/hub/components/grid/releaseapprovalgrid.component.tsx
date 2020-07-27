@@ -155,6 +155,12 @@ export default class ReleaseApprovalGrid extends React.Component {
         await this.forceRelease(data);
       }
     );
+    ReleaseApprovalEvents.subscribe(
+      EventType.ForceCancel,
+      async (data: ReleaseData) => {
+        await this.forceCancel(data);
+      }
+    );
 
     ReleaseApprovalEvents.subscribe(
       EventType.ApproveSingleRelease,
@@ -211,7 +217,15 @@ export default class ReleaseApprovalGrid extends React.Component {
           <ReleaseApprovalForm
             ref={this._approvalForm}
             action={this._action}
-            onConfirm={(releases, toCancel, action, comment, deferredDate) => this.confirmAction(releases, toCancel, action, comment, deferredDate)}
+            onConfirm={(releases, toCancel, action, comment, deferredDate) =>
+              this.confirmAction(
+                releases,
+                toCancel,
+                action,
+                comment,
+                deferredDate
+              )
+            }
           />
         </div>
       </div>
@@ -349,6 +363,24 @@ export default class ReleaseApprovalGrid extends React.Component {
     this.dialog.openDialog(this._selectedReleases);
   }
 
+  private forceCancel(data: ReleaseData) {
+    if (!data.info?.release) throw "missing release info";
+    if (!data.parent) throw "missing parent approval";
+    if (!data.parent.children) throw "missing siblings";
+
+    const childIndex = data.parent.children.indexOf(data);
+    console.log(`index:${childIndex}`);
+    // cancel all previous releases, AND this one
+    const toCancel = data.parent.children.slice(childIndex);
+
+    this._action.value = ReleaseApprovalAction.ForceCancel;
+    this._selectedReleases = new ArrayItemProvider<ReleaseData>([data]);
+    this.dialog.openDialog(
+      this._selectedReleases,
+      new ArrayItemProvider<ReleaseData>(toCancel)
+    );
+  }
+
   private forceRelease(data: ReleaseData) {
     if (!data.info?.release) throw "missing release info";
     if (!data.parent) throw "missing parent approval";
@@ -356,6 +388,7 @@ export default class ReleaseApprovalGrid extends React.Component {
 
     const childIndex = data.parent.children.indexOf(data);
     console.log(`index:${childIndex}`);
+    // cancel all previous releases (without this one)
     const toCancel = data.parent.children.slice(childIndex + 1);
 
     this._action.value = ReleaseApprovalAction.ForceRelease;
@@ -386,24 +419,32 @@ export default class ReleaseApprovalGrid extends React.Component {
           releases.map((r) => r.approval!),
           comment
         );
+      case ActionType.ForceCancel:
+        await this._approvalsService.cancelAll(toCancel, comment);
+        break;
       case ActionType.ForceRelease:
         // cancel all previous releases (for selected env)
         // wait until selected release has pending approval
         // confirm the pending approval
-        await this._approvalsService.cancelAll(
-          toCancel,
-          comment
-        );
+        await this._approvalsService.cancelAll(toCancel, comment);
 
-        const ids = releases.map(r => r.release.id);
+        const ids = releases.map((r) => r.release.id);
         for (let i = 10; i > 0; i--) {
-
-          const approvals = await this._approvalsService.findApprovals(undefined, undefined, ids);
+          const approvals = await this._approvalsService.findApprovals(
+            undefined,
+            undefined,
+            ids
+          );
           if (approvals?.length) {
-            await this._approvalsService.approveAll(approvals.map(a => a.approval!), comment);
+            await this._approvalsService.approveAll(
+              approvals.map((a) => a.approval!),
+              comment
+            );
             break;
           } else {
-            if (i <= 0) { throw `timed out while waiting for new approvals of releases: ${ids}` }
+            if (i <= 0) {
+              throw `timed out while waiting for new approvals of releases: ${ids}`;
+            }
             await sleep(1000);
           }
         }
@@ -522,5 +563,5 @@ class ItemProvider extends ObservableArray<ReleaseRow> {
 }
 
 function sleep(ms: number) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
