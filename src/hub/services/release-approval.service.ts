@@ -36,6 +36,7 @@ export class ReleaseApprovalService {
       undefined,
       true
     );
+
     return approvals.map((a) => ({
       project,
       releaseDefinition: a.releaseDefinition,
@@ -106,21 +107,26 @@ export class ReleaseApprovalService {
 
   async cancel(releaseData: ReleaseData, comment: string) {
     const release = releaseData.info!.release!;
-    const env = release.environments.find(e => e.name === releaseData.releaseEnvironment.name);
+    const env = release.environments.find(
+      (e) => e.name === releaseData.releaseEnvironment.name
+    );
     if (!env) {
       throw `no matching environment found!`;
     }
     let client: ReleaseRestClient = getClient(ReleaseRestClient);
-    
-    await client.updateReleaseEnvironment({
-      status: EnvironmentStatus.Canceled,
-      comment,
-      variables: {},
-      scheduledDeploymentTime: null as any
-    }, releaseData.project.name, release.id, env.id);
-    
-  }
 
+    await client.updateReleaseEnvironment(
+      {
+        status: EnvironmentStatus.Canceled,
+        comment,
+        variables: {},
+        scheduledDeploymentTime: null as any,
+      },
+      releaseData.project.name,
+      release.id,
+      env.id
+    );
+  }
 
   async approve(
     approval: ReleaseApproval,

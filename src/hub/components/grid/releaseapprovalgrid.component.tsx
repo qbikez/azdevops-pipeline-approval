@@ -74,7 +74,7 @@ export default class ReleaseApprovalGrid extends React.Component {
   private _approvalsService: ReleaseApprovalService = new ReleaseApprovalService();
   private _releaseService: ReleaseService = new ReleaseService();
   private _treeItemProvider = new ItemProvider();
-  private _pageLength: number = 2;
+  private _pageLength: number = 20;
   private _hasMoreItems: ObservableValue<boolean> = new ObservableValue<
     boolean
   >(false);
@@ -242,10 +242,29 @@ export default class ReleaseApprovalGrid extends React.Component {
     }
     const rowShimmer = this.getRowShimmer()[0];
     this._treeItemProvider.add(rowShimmer);
-    const approvals: ReleaseData[] = await this._approvalsService.findApprovals(
+    let approvals: ReleaseData[] = await this._approvalsService.findApprovals(
       this._pageLength,
       continuationToken
     );
+
+    approvals = approvals.reduce<ReleaseData[]>((aggregate, current) => {
+      var sameIdx = aggregate.findIndex(
+        (i) => i.releaseDefinition.id === current.releaseDefinition.id
+      );
+      console.log(`def id ${current.releaseDefinition.id} found at ${sameIdx}`);
+
+      if (sameIdx >= 0) {
+        if (current.id < aggregate[sameIdx].id) {
+          // take the oldest approval as starting point (should be furthest one behind)
+          aggregate[sameIdx] = current;
+        }
+        return aggregate;
+      }
+
+      aggregate.push(current);
+      return aggregate;
+    }, []);
+
     const promises = approvals.map(async (a) => {
       await this._releaseService.getLinks(a);
     });
